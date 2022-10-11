@@ -1,7 +1,7 @@
 import { CompressedImage } from "@foxglove/schemas/schemas/typescript";
 import { PanelExtensionContext, RenderState, Topic, MessageEvent } from "@foxglove/studio";
 import JMuxer from "jmuxer";
-import { useLayoutEffect, useEffect, useState, useRef, useMemo } from "react";
+import { useLayoutEffect, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import ReactDOM from "react-dom";
 
 type ImageMessage = MessageEvent<CompressedImage>;
@@ -15,7 +15,10 @@ const feedToMuxer = true;
 // // Draws the compressed image data into our canvas.
 function feedData(imgData: Uint8Array, muxer: JMuxer, format: string) {
   if (feedToMuxer) {
-    muxer.feed({ video: imgData });
+    // const parts = format.split("; ");
+
+    // muxer.feed({ video: imgData, duration: parseFloat(parts[2]!) });
+    muxer.feed({ video: imgData, duration: 1 / 60 });
   }
   console.log(format);
 }
@@ -63,14 +66,21 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       setRenderDone(() => done);
       setTopics(renderState.topics);
 
+      // console.log(`curret frame: ${renderState.currentFrame?.length ?? "0"}`);
       // Send the most recent message to muxer
       if (renderState.currentFrame && renderState.currentFrame.length > 0) {
-        const imageMessage = renderState.currentFrame[
-          renderState.currentFrame.length - 1
-        ] as ImageMessage;
         if (muxer) {
-          feedData(imageMessage.message.data, muxer, imageMessage?.message.format);
+          renderState.currentFrame.forEach((f) => {
+            const imageMessage = f as ImageMessage;
+            feedData(imageMessage.message.data, muxer, imageMessage?.message.format);
+          });
         }
+        // const imageMessage = renderState.currentFrame[
+        //   renderState.currentFrame.length - 1
+        // ] as ImageMessage;
+        // if (muxer) {
+        //   feedData(imageMessage.message.data, muxer, imageMessage?.message.format);
+        // }
       }
     };
 
@@ -78,12 +88,16 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     context.watch("currentFrame");
   }, [context, muxer]);
 
+  const onReset = useCallback(() => {
+    muxer?.reset();
+  }, [muxer]);
+
   useLayoutEffect(() => {
     const videoMux = new JMuxer({
       mode: "video",
       node: videoRef.current!,
-      // debug: true,
-      flushingTime: 200,
+      debug: true,
+      flushingTime: 50,
       fps: 60,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -122,6 +136,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
           ))}
         </select>
       </div>
+      <button onClick={onReset}>Reset</button>
       <video autoPlay width={480} height={480} ref={videoRef} src="" />
     </div>
   );
