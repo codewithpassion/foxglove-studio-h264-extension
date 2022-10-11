@@ -4,6 +4,7 @@ module.exports = {
       test: /\.(png|jpg|jpeg|gif|svg)$/i,
       type: "asset/inline",
     });
+    config.resolve.fallback = { stream: false };
     return config;
   },
 };

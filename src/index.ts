@@ -1,6 +1,6 @@
 import { ExtensionContext } from "@foxglove/studio";
 
-import { initExamplePanel } from "./ExamplePanel";
+import { initExamplePanel } from "./H264Panel";
 
 export function activate(extensionContext: ExtensionContext): void {
   extensionContext.registerPanel({

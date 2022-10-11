@@ -1,6 +1,10 @@
-# custom-image-extension
+# H264 render extension - based on custom-image-extension
 
-## _A Foxglove Studio Extension_
+*Important* this does not work with the standard Foxglove studio. 
+The desktop app does not  have a Content Security Policy for `media-src`. 
+Therefore, the video won't render. 
 
-This is a simple [Foxglove Studio](http://foxglove.dev/studio) extension panel that demonstrates
-rendering compressed image messages and subscribing to a topic selected by the user.
+To fix this, you will need to change `foxglove/studio/desktop/index.ts`.
+Add ```"media-src": "'self' data: https: package: http: blob:",``` to the ```const contentSecurityPolicy```
+on line 248. See https://github.com/foxglove/studio/blob/main/desktop/main/index.ts#L248 
+
