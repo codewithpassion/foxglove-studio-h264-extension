@@ -8,7 +8,7 @@
   "main": "./dist/extension.js",
   "scripts": {
     "build": "foxglove-extension build",
-    "foxglove:prepublish": "foxglove-extension build --mode production",
+    "foxglove:prepublish": "foxglove-extension build --mode development",
     "lint:ci": "eslint --report-unused-disable-directives .",
     "lint": "eslint --report-unused-disable-directives --fix .",
     "local-install": "foxglove-extension install",
@@ -40,6 +40,9 @@
   },
   "dependencies": {
     "@types/jmuxer": "^2.0.3",
-    "jmuxer": "^2.0.5"
+    "@types/lodash": "^4.14.186",
+    "immer": "^9.0.15",
+    "jmuxer": "^2.0.5",
+    "lodash": "^4.17.21"
   }
 }

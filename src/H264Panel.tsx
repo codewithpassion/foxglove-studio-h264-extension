@@ -1,119 +1,160 @@
 import { CompressedImage } from "@foxglove/schemas/schemas/typescript";
-import { PanelExtensionContext, RenderState, Topic, MessageEvent } from "@foxglove/studio";
+import { PanelExtensionContext, RenderState, MessageEvent } from "@foxglove/studio";
 import JMuxer from "jmuxer";
-import { useLayoutEffect, useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
+
+import { useH264State } from "./Settings";
+import { Bitstream, NALUStream } from "./h264-utils";
 
 type ImageMessage = MessageEvent<CompressedImage>;
 
-type PanelState = {
-  topic?: string;
-};
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function getNaluTypes(buffer: Uint8Array) {
+  const stream = new NALUStream(buffer, { type: "annexB" });
+  const result: number[] = [];
 
-const feedToMuxer = true;
-
-// // Draws the compressed image data into our canvas.
-function feedData(imgData: Uint8Array, muxer: JMuxer, format: string) {
-  if (feedToMuxer) {
-    // const parts = format.split("; ");
-
-    // muxer.feed({ video: imgData, duration: parseFloat(parts[2]!) });
-    muxer.feed({ video: imgData, duration: 1 / 60 });
+  for (const nalu of stream.nalus()) {
+    if (nalu?.nalu) {
+      const bitstream = new Bitstream(nalu?.nalu);
+      bitstream.seek(3);
+      const nal_unit_type = bitstream.u(5);
+      if (nal_unit_type != undefined) {
+        result.push(nal_unit_type);
+      }
+    }
   }
-  console.log(format);
+
+  return result;
 }
 
 function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Element {
-  const [topics, setTopics] = useState<readonly Topic[] | undefined>();
-
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const muxerRef = useRef<JMuxer | undefined>(undefined);
+  const lastIFrameRef = useRef<Uint8Array | undefined>(undefined);
 
-  const [muxer, setMuxer] = useState<JMuxer | undefined>(undefined);
-
-  // Restore our state from the layout via the context.initialState property.
-  const [state, setState] = useState<PanelState>(() => {
-    return context.initialState as PanelState;
-  });
-
-  // Filter all of our topics to find the ones with a CompresssedImage message.
-  const imageTopics = useMemo(
-    () => (topics ?? []).filter((topic) => topic.datatype === "sensor_msgs/CompressedImage"),
-    [topics],
-  );
+  const { state, setState, updatePanelSettingsEditor, imageTopics, setTopics } =
+    useH264State(context);
 
   useEffect(() => {
     // Save our state to the layout when the topic changes.
-    context.saveState({ topic: state.topic });
+    context.saveState(state);
 
-    if (state.topic) {
+    if (state.data.topic) {
       // Subscribe to the new image topic when a new topic is chosen.
-      context.subscribe([state.topic]);
+      context.subscribe([state.data.topic]);
     }
-  }, [context, state.topic]);
 
-  // Choose our first available image topic as a default once we have a list of topics available.
-  useEffect(() => {
-    if (state.topic == undefined) {
-      setState({ topic: imageTopics[0]?.name });
-    }
-  }, [state.topic, imageTopics]);
+    updatePanelSettingsEditor(imageTopics);
+  }, [context, state, imageTopics, updatePanelSettingsEditor]);
+
+  // // Draws the compressed image data into our canvas.
+  const feedData = useCallback(
+    ({
+      imgData,
+      playbackSpeed,
+      addDuration,
+    }: {
+      imgData: Uint8Array;
+      playbackSpeed: number | undefined;
+      addDuration: boolean;
+    }) => {
+      let duration = 1000 / 60;
+      if (playbackSpeed != undefined && playbackSpeed !== 0) {
+        duration = duration / playbackSpeed;
+      }
+      if (addDuration) {
+        muxerRef.current?.feed({ video: imgData, duration });
+      } else {
+        muxerRef.current?.feed({ video: imgData });
+      }
+    },
+    [],
+  );
 
   // Setup our onRender function and start watching topics and currentFrame for messages.
   useLayoutEffect(() => {
     context.onRender = (renderState: RenderState, done) => {
       setRenderDone(() => done);
-      setTopics(renderState.topics);
 
-      // console.log(`curret frame: ${renderState.currentFrame?.length ?? "0"}`);
-      // Send the most recent message to muxer
+      if (renderState.topics) {
+        setTopics(renderState.topics);
+      }
+
+      // Send the frames to the muxer
       if (renderState.currentFrame && renderState.currentFrame.length > 0) {
-        if (muxer) {
+        if (muxerRef.current) {
           renderState.currentFrame.forEach((f) => {
             const imageMessage = f as ImageMessage;
-            feedData(imageMessage.message.data, muxer, imageMessage?.message.format);
+            feedData({
+              imgData: imageMessage.message.data,
+              playbackSpeed: renderState.playbackSpeed,
+              addDuration: state.debug?.addDuration ?? false,
+            });
+
+            // if (lastIFrameRef.current !== imageMessage.message.data) {
+            //   const naluTypes = getNaluTypes(imageMessage.message.data);
+            //   if (
+            //     naluTypes.filter((t) => {
+            //       new Set([/*1, 7, 8*/ 5]).has(t);
+            //     }) != undefined
+            //   ) {
+            //     lastIFrameRef.current = imageMessage.message.data;
+            //     console.log(`Got i-frame`);
+            //   }
+            // }
           });
         }
-        // const imageMessage = renderState.currentFrame[
-        //   renderState.currentFrame.length - 1
-        // ] as ImageMessage;
-        // if (muxer) {
-        //   feedData(imageMessage.message.data, muxer, imageMessage?.message.format);
-        // }
       }
     };
 
+    context.watch("playbackSpeed");
+    context.watch("currentTime");
+    context.watch("didSeek");
     context.watch("topics");
-    context.watch("currentFrame");
-  }, [context, muxer]);
 
-  const onReset = useCallback(() => {
-    muxer?.reset();
-  }, [muxer]);
+    context.watch("currentFrame");
+    context.watch("allFrames");
+  }, [context, feedData, setTopics, state.debug?.addDuration]);
 
   useLayoutEffect(() => {
+    const debug = state.debug?.debug ?? false;
+    console.info(`Jmuxer debug: ${debug ? "true" : "false"}`);
+
+    if (muxerRef.current) {
+      muxerRef.current.reset();
+      muxerRef.current.destroy();
+      muxerRef.current = undefined;
+    }
+
     const videoMux = new JMuxer({
       mode: "video",
       node: videoRef.current!,
-      debug: true,
+      debug,
       flushingTime: 50,
-      fps: 60,
+      fps: state.data.fps ?? 60,
+      onReady: () => {
+        console.log("JMuxer: Ready");
+        if (lastIFrameRef.current) {
+          muxerRef.current?.feed({ video: lastIFrameRef.current });
+        }
+      },
+      onError: (err: Error) => {
+        console.log(`JMuxer error ${err.message}`);
+      },
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
+      // ^^^^^^^^^^  this is because the @types/jmuxer is not up to date.
       onMissingVideoFrames: () => {
         console.log("JMuxer: MISSING VIDEO FRAMES");
       },
-      onReady: () => {
-        console.log("JMuxer: Ready");
-      },
-      onError: (err) => {
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        console.log(`JMuxer error ${err}`);
-      },
     });
-    setMuxer(videoMux);
-  }, []);
+    muxerRef.current = videoMux;
+  }, [state.data.fps, state.debug?.debug]);
 
   // Call our done function at the end of each render.
   useEffect(() => {
@@ -125,18 +166,19 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       <div style={{ paddingBottom: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
         <label>Choose a topic to render:</label>
         <select
-          value={state.topic}
-          onChange={(event) => setState({ topic: event.target.value })}
+          value={state.data.topic}
+          onChange={(event) =>
+            setState({ ...state, data: { ...state.data, topic: event.target.value } })
+          }
           style={{ flex: 1 }}
         >
-          {imageTopics.map((topic) => (
+          {imageTopics?.map((topic) => (
             <option key={topic.name} value={topic.name}>
               {topic.name}
             </option>
           ))}
         </select>
       </div>
-      <button onClick={onReset}>Reset</button>
       <video autoPlay width={480} height={480} ref={videoRef} src="" />
     </div>
   );
