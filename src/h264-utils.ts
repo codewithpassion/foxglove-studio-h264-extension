@@ -1,3 +1,7 @@
+// Based on https://github.com/OllieJones/h264-interp-utils
+// No License given.
+
+
 /* eslint-disable */
 
 // noinspection DuplicatedCode
