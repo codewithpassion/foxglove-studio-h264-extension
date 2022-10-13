@@ -5,30 +5,10 @@ import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react
 import ReactDOM from "react-dom";
 
 import { useH264State } from "./Settings";
-import { Bitstream, NALUStream } from "./h264-utils";
+import { Bitstream, NALUStream } from "./lib/h264-utils";
+import { identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
 
 type ImageMessage = MessageEvent<CompressedImage>;
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getNaluTypes(buffer: Uint8Array) {
-  const stream = new NALUStream(buffer, { type: "annexB" });
-  const result: number[] = [];
-
-  for (const nalu of stream.nalus()) {
-    if (nalu?.nalu) {
-      const bitstream = new Bitstream(nalu?.nalu);
-      bitstream.seek(3);
-      const nal_unit_type = bitstream.u(5);
-      if (nal_unit_type != undefined) {
-        result.push(nal_unit_type);
-      }
-    }
-  }
-
-  return result;
-}
 
 function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Element {
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
@@ -36,6 +16,8 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
   const videoRef = useRef<HTMLVideoElement>(null);
   const muxerRef = useRef<JMuxer | undefined>(undefined);
   const lastIFrameRef = useRef<Uint8Array | undefined>(undefined);
+
+  const naluStreamInfoRef = useRef<NaluStreamInfo | undefined>(undefined);
 
   const { state, setState, updatePanelSettingsEditor, imageTopics, setTopics } =
     useH264State(context);
@@ -52,6 +34,32 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     updatePanelSettingsEditor(imageTopics);
   }, [context, state, imageTopics, updatePanelSettingsEditor]);
 
+  const getNaluStreamInfo = useCallback((imgData: Uint8Array) => {
+    if (naluStreamInfoRef.current == undefined) {
+      const streamInfo = identifyNaluStreamInfo(imgData);
+      if (streamInfo.type !== "unknown") {
+        naluStreamInfoRef.current = streamInfo;
+        console.info(
+          `Stream identified as ${streamInfo.type} with box size: ${streamInfo.boxSize}`,
+        );
+      }
+    }
+    return naluStreamInfoRef.current;
+  }, []);
+
+  const getVideoData = useCallback(
+    (imgData: Uint8Array) => {
+      const streamInfo = getNaluStreamInfo(imgData);
+      return streamInfo?.type === "packet"
+        ? new NALUStream(imgData, {
+            type: "packet",
+            boxSize: streamInfo.boxSize,
+          }).convertToAnnexB().buf
+        : imgData;
+    },
+    [getNaluStreamInfo],
+  );
+
   // // Draws the compressed image data into our canvas.
   const feedData = useCallback(
     ({
@@ -63,17 +71,19 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       playbackSpeed: number | undefined;
       addDuration: boolean;
     }) => {
+      const videoData = getVideoData(imgData);
+
       let duration = 1000 / 60;
       if (playbackSpeed != undefined && playbackSpeed !== 0) {
         duration = duration / playbackSpeed;
       }
       if (addDuration) {
-        muxerRef.current?.feed({ video: imgData, duration });
+        muxerRef.current?.feed({ video: videoData, duration });
       } else {
-        muxerRef.current?.feed({ video: imgData });
+        muxerRef.current?.feed({ video: videoData });
       }
     },
-    [],
+    [getVideoData],
   );
 
   // Setup our onRender function and start watching topics and currentFrame for messages.

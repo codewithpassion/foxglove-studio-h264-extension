@@ -464,7 +464,7 @@ export class Bitstream extends RawBitstream {
   }
 }
 
-type StreamType = "packet" | "annexB" | "unknown";
+export type StreamType = "packet" | "annexB" | "unknown";
 
 type NextPackageResult = { n: number; s: number; e: number; message?: string };
 
