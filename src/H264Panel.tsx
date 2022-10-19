@@ -5,7 +5,7 @@ import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react
 import ReactDOM from "react-dom";
 
 import { useH264State } from "./Settings";
-import { Bitstream, NALUStream } from "./lib/h264-utils";
+import { NALUStream } from "./lib/h264-utils";
 import { identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
 
 type ImageMessage = MessageEvent<CompressedImage>;
@@ -64,24 +64,25 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
   const feedData = useCallback(
     ({
       imgData,
-      playbackSpeed,
-      addDuration,
-    }: {
+    }: // playbackSpeed,
+    // addDuration,
+    {
       imgData: Uint8Array;
       playbackSpeed: number | undefined;
       addDuration: boolean;
     }) => {
       const videoData = getVideoData(imgData);
 
-      let duration = 1000 / 60;
-      if (playbackSpeed != undefined && playbackSpeed !== 0) {
-        duration = duration / playbackSpeed;
-      }
-      if (addDuration) {
-        muxerRef.current?.feed({ video: videoData, duration });
-      } else {
-        muxerRef.current?.feed({ video: videoData });
-      }
+      // let duration = 1000 / 60;
+      // if (playbackSpeed != undefined && playbackSpeed !== 0) {
+      //   duration = duration / playbackSpeed;
+      // }
+      // if (addDuration) {
+      //   muxerRef.current?.feed({ video: videoData, duration });
+      // } else {
+      //   muxerRef.current?.feed({ video: videoData });
+      // }
+      muxerRef.current?.feed({ video: videoData, duration: 1 });
     },
     [getVideoData],
   );
@@ -145,8 +146,14 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       mode: "video",
       node: videoRef.current!,
       debug,
-      flushingTime: 50,
-      fps: state.data.fps ?? 60,
+      flushingTime: 1,
+      // fps: state.data.fps ?? 60,
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      // ^^^^^^^^^^  this is because the @types/jmuxer is not up to date.
+      // readFpsFromTrack: true,
+
       onReady: () => {
         console.log("JMuxer: Ready");
         if (lastIFrameRef.current) {
