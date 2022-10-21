@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { CompressedImage } from "@foxglove/schemas/schemas/typescript";
 import { PanelExtensionContext, RenderState, MessageEvent } from "@foxglove/studio";
 import JMuxer from "jmuxer";
@@ -5,8 +6,8 @@ import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react
 import ReactDOM from "react-dom";
 
 import { useH264State } from "./Settings";
-import { NALUStream } from "./lib/h264-utils";
-import { identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
+import { NALUStream, SPS } from "./lib/h264-utils";
+import { getNalus, identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
 
 type ImageMessage = MessageEvent<CompressedImage>;
 
@@ -69,7 +70,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     {
       imgData: Uint8Array;
       playbackSpeed: number | undefined;
-      addDuration: boolean;
+      addDuration?: boolean;
     }) => {
       const videoData = getVideoData(imgData);
 
@@ -82,29 +83,42 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       // } else {
       //   muxerRef.current?.feed({ video: videoData });
       // }
-      muxerRef.current?.feed({ video: videoData, duration: 1 });
+      muxerRef.current?.feed({ video: videoData });
     },
     [getVideoData],
   );
 
-  // Setup our onRender function and start watching topics and currentFrame for messages.
-  useLayoutEffect(() => {
-    context.onRender = (renderState: RenderState, done) => {
+  const onRender = useCallback(
+    (renderState: RenderState, done: () => void) => {
       setRenderDone(() => done);
 
       if (renderState.topics) {
         setTopics(renderState.topics);
       }
 
+      // if (videoRef.current && renderState.playbackSpeed != null) {
+      //   videoRef.current.playbackRate = renderState.playbackSpeed;
+      // }
+
       // Send the frames to the muxer
       if (renderState.currentFrame && renderState.currentFrame.length > 0) {
         if (muxerRef.current) {
           renderState.currentFrame.forEach((f) => {
             const imageMessage = f as ImageMessage;
+
+            const nalus = getNalus(imageMessage.message.data);
+            const spsNalus = nalus.filter((n) => n.type === 7);
+            if (spsNalus.length > 0 && spsNalus[0]?.nalu.nalu) {
+              // @ts-ignore
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const sps = new SPS(spsNalus[0]?.nalu.nalu);
+              // console.log(sps.framesPerSecond);
+            }
+
             feedData({
               imgData: imageMessage.message.data,
               playbackSpeed: renderState.playbackSpeed,
-              addDuration: state.debug?.addDuration ?? false,
+              // addDuration: state.debug?.addDuration ?? false,
             });
 
             // if (lastIFrameRef.current !== imageMessage.message.data) {
@@ -121,7 +135,13 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
           });
         }
       }
-    };
+    },
+    [feedData, setTopics],
+  );
+
+  // Setup our onRender function and start watching topics and currentFrame for messages.
+  useLayoutEffect(() => {
+    context.onRender = onRender;
 
     context.watch("playbackSpeed");
     context.watch("currentTime");
@@ -130,7 +150,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
 
     context.watch("currentFrame");
     context.watch("allFrames");
-  }, [context, feedData, setTopics, state.debug?.addDuration]);
+  }, [context, feedData, onRender, setTopics]);
 
   useLayoutEffect(() => {
     const debug = state.debug?.debug ?? false;
@@ -142,20 +162,25 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       muxerRef.current = undefined;
     }
 
+    const readFpsFromTrack = state.data.readFpsFromSource ?? false;
     const videoMux = new JMuxer({
       mode: "video",
       node: videoRef.current!,
       debug,
       flushingTime: 1,
-      // fps: state.data.fps ?? 60,
+      fps: readFpsFromTrack ? undefined : state.data.fps ?? 60,
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // ^^^^^^^^^^  this is because the @types/jmuxer is not up to date.
-      // readFpsFromTrack: true,
+      readFpsFromTrack,
 
       onReady: () => {
-        console.log("JMuxer: Ready");
+        console.log(
+          `JMuxer: Ready - readFpsFromSource: ${
+            state.data.readFpsFromSource === true ? "true" : "false"
+          }${!readFpsFromTrack ? ` - FPS: ${state.data.fps ?? "?"}` : ""}`,
+        );
         if (lastIFrameRef.current) {
           muxerRef.current?.feed({ video: lastIFrameRef.current });
         }
@@ -171,7 +196,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       },
     });
     muxerRef.current = videoMux;
-  }, [state.data.fps, state.debug?.debug]);
+  }, [state.data.fps, state.data.readFpsFromSource, state.debug?.debug]);
 
   // Call our done function at the end of each render.
   useEffect(() => {

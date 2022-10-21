@@ -7,6 +7,7 @@ export type H264State = {
   data: {
     topic?: string;
     fps?: number;
+    readFpsFromSource?: boolean;
   };
   debug?: {
     debug?: boolean;
@@ -40,6 +41,7 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
       data: {
         topic: partialState?.data?.topic ?? "",
         fps: partialState?.data?.fps ?? 60,
+        readFpsFromSource: partialState?.data?.readFpsFromSource ?? false,
       },
       debug: {
         addDuration: partialState?.debug?.addDuration ?? true,
@@ -88,6 +90,11 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
                 options: topicOptions,
                 value: state.data.topic,
               },
+              readFpsFromSource: {
+                label: "Read FPS from video",
+                input: "boolean",
+                value: state.data?.readFpsFromSource ?? false,
+              },
               fps: {
                 label: "FPS",
                 input: "select",
@@ -97,6 +104,7 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
                   { value: 60, label: "60fps" },
                 ],
                 value: state.data.fps,
+                disabled: state.data?.readFpsFromSource ?? false,
               },
             },
           },

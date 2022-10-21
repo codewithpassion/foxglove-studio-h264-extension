@@ -16,12 +16,11 @@ function identifyNaluStreamInfo(buffer: Uint8Array): NaluStreamInfo {
   return { type: "unknown", boxSize: -1 };
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getNaluTypes(buffer: Uint8Array): number[] {
+type GetNaluResult = { type: number; nalu: { rawNalu: Uint8Array; nalu: Uint8Array } }[];
+
+function getNalus(buffer: Uint8Array): GetNaluResult {
   const stream = new NALUStream(buffer, { type: "annexB" });
-  const result: number[] = [];
+  const result: GetNaluResult = [];
 
   for (const nalu of stream.nalus()) {
     if (nalu?.nalu) {
@@ -29,7 +28,7 @@ function getNaluTypes(buffer: Uint8Array): number[] {
       bitstream.seek(3);
       const nal_unit_type = bitstream.u(5);
       if (nal_unit_type != undefined) {
-        result.push(nal_unit_type);
+        result.push({ type: nal_unit_type, nalu });
       }
     }
   }
@@ -37,4 +36,4 @@ function getNaluTypes(buffer: Uint8Array): number[] {
   return result;
 }
 
-export { identifyNaluStreamInfo, getNaluTypes };
+export { identifyNaluStreamInfo, getNalus };
