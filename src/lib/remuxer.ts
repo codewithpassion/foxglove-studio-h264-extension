@@ -79,16 +79,18 @@ export class Remuxer {
       }
     }
 
-    const sampleLength = units.reduce((len, cur) => len + cur.length, 0);
+    const sampleLength = units.reduce((len, cur) => len + cur.byteLength + 4, 0);
     const payload = new Uint8Array(sampleLength);
     let offset = 0;
     while (units.length > 0) {
       const unit = units.shift();
       if (unit) {
-        payload.set(unit, offset);
-        offset += unit.length;
+        const unitPayload = this.getLengthPrefixedData(unit);
+        payload.set(unitPayload, offset);
+        offset += unitPayload.length;
       }
     }
+
     const track = this.getTrack()!;
     track.len = sampleLength;
     const moof = MP4.moof(this.seq++, this.dts++, track);
@@ -144,5 +146,13 @@ export class Remuxer {
     tmp.set(buffer1, 0);
     tmp.set(buffer2, buffer1.byteLength | 0);
     return tmp;
+  }
+
+  private getLengthPrefixedData(buffer: Uint8Array): Uint8Array {
+    const result = new Uint8Array(buffer.byteLength + 4);
+    const view = new DataView(result.buffer);
+    view.setUint32(0, buffer.byteLength);
+    result.set(buffer, 4);
+    return result;
   }
 }
