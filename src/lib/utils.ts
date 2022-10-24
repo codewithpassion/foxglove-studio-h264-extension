@@ -36,4 +36,13 @@ function getNalus(buffer: Uint8Array): GetNaluResult {
   return result;
 }
 
-export { identifyNaluStreamInfo, getNalus };
+const NaluTypes = {
+  NDR: 1,
+  IDR: 5,
+  SEI: 6,
+  SPS: 7,
+  PPS: 8,
+  AUD: 9,
+};
+
+export { identifyNaluStreamInfo, getNalus, NaluTypes };
