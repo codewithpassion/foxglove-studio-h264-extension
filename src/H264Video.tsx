@@ -114,7 +114,7 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData, renderDone }) => {
         muted
         preload="metadata"
       ></video>
-      <div>AAA - {videoRef.current?.currentTime}</div>
+      <div>Current video time: {videoRef.current?.currentTime}</div>
     </Box>
   );
 };

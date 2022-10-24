@@ -80,7 +80,6 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
         renderState.currentFrame.forEach((f) => {
           const imageMessage = f as ImageMessage;
           setImageData(getVideoData(imageMessage.message.data));
-          // done();
         });
       }
 
