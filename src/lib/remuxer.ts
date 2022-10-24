@@ -49,9 +49,11 @@ export class Remuxer {
     for (const nalu of nalus) {
       if (!this.isReady && !this.pps && nalu.type === NaluTypes.PPS) {
         this.pps = nalu.nalu.nalu;
+        units.push(nalu.nalu.nalu);
       }
       if (!this.isReady && !this.sps && nalu.type === NaluTypes.SPS) {
         this.sps = new SPS(nalu.nalu.nalu);
+        units.push(nalu.nalu.nalu);
       }
 
       if (!this.isReady && this.sps && this.pps) {
