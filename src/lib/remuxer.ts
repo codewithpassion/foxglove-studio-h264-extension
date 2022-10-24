@@ -30,7 +30,8 @@ export class Remuxer {
     if (this.initSegment) {
       this.initSegmentSent = true;
       try {
-        this.sourceBuffer?.appendBuffer(this.appendByteArray(this.initSegment, this.pending));
+        this.sourceBuffer?.appendBuffer(this.initSegment);
+        // this.sourceBuffer?.appendBuffer(this.appendByteArray(this.initSegment, this.pending));
         if (this.pending.length > 0) {
           this.pending = new Uint8Array();
         }
