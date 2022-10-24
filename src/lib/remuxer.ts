@@ -46,6 +46,7 @@ export class Remuxer {
     const units: Uint8Array[] = [];
 
     let hasInitSegment = false;
+    let hasKeyframe = false;
     for (const nalu of nalus) {
       if (!this.isReady && !this.pps && nalu.type === NaluTypes.PPS) {
         this.pps = nalu.nalu.nalu;
@@ -64,6 +65,9 @@ export class Remuxer {
         if (nalu.type === NaluTypes.IDR || nalu.type === NaluTypes.NDR) {
           units.push(nalu.nalu.nalu);
         }
+      }
+      if (nalu.type === NaluTypes.IDR) {
+        hasKeyframe = true;
       }
     }
     if (hasInitSegment) {
@@ -94,6 +98,20 @@ export class Remuxer {
     }
 
     const track = this.getTrack()!;
+    const mp4Sample = {
+      size: sampleLength,
+      duration: 33,
+      cts: 0,
+      flags: {
+        isLeading: 0,
+        isDependedOn: 0,
+        hasRedundancy: 0,
+        degradPrio: 0,
+        isNonSync: hasKeyframe ? 0 : 1,
+        dependsOn: hasKeyframe ? 2 : 1,
+      },
+    };
+    track.samples.push(mp4Sample);
     track.len = sampleLength;
     const moof = MP4.moof(this.seq++, this.dts++, track);
     const mdat = MP4.mdat(payload);
@@ -103,7 +121,6 @@ export class Remuxer {
     } else {
       try {
         this.sourceBuffer.appendBuffer(this.appendByteArray(this.pending, combined));
-        console.log(`XX: AppendBuffer seq: ${this.seq}`);
       } catch (e) {
         console.error(`AppendBuffer error`, e);
       }

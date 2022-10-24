@@ -68,6 +68,7 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
   useEffect(() => {
     if (videoRef.current && mediaSource != undefined) {
       videoRef.current.src = URL.createObjectURL(mediaSource);
+      videoRef.current.play().catch((err) => console.error(err));
     }
   }, [mediaSource]);
 
@@ -78,11 +79,11 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
   }, [codec, mediaSource]);
 
   // log
-  useEffect(() => {
-    ["onsourceclose", "onsourceended", "onsourceopen"].forEach((ev) =>
-      mediaSource.addEventListener(ev, () => console.log(`XX: MediaSource event: ${ev}`)),
-    );
-  }, [mediaSource]);
+  // useEffect(() => {
+  //   ["onsourceclose", "onsourceended", "onsourceopen"].forEach((ev) =>
+  //     mediaSource.addEventListener(ev, () => console.log(`XX: MediaSource event: ${ev}`)),
+  //   );
+  // }, [mediaSource]);
 
   return (
     <Box
@@ -92,7 +93,14 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
         display: "flex",
       }}
     >
-      <video controls ref={videoRef} src="" muted preload="metadata"></video>
+      <video
+        style={{ width: "100%", height: "auto" }}
+        controls={false}
+        ref={videoRef}
+        src=""
+        muted
+        preload="metadata"
+      ></video>
     </Box>
   );
 };

@@ -11,5 +11,5 @@ export type Track = {
   height: number;
   timescale: number;
   duration: number;
-  samples: Uint8Array[];
+  samples: object[];
 };
