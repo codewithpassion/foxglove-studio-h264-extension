@@ -1,4 +1,5 @@
 export type Track = {
+  codec: string;
   id: number;
   type: "video";
   len: number;

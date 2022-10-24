@@ -108,7 +108,8 @@ export class Remuxer {
   private getTrack(): Track | undefined {
     if (this.isReady && this.sps && this.pps) {
       const track: Track = {
-        id: 1,
+        codec: this.sps.MIME,
+        id: 3,
         type: "video",
         len: 0, // correct ??
         fragmented: true,
