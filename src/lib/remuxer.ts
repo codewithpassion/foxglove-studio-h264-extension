@@ -113,7 +113,7 @@ export class Remuxer {
         type: "video",
         len: 0, // correct ??
         fragmented: true,
-        sps: this.sps.bitstream.buffer,
+        sps: this.sps.bitstream.stream,
         pps: this.pps,
         fps: this.sps.framesPerSecond ?? 60,
         width: this.sps.picWidth,
