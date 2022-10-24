@@ -64,9 +64,12 @@ export class Remuxer {
     }
     if (hasInitSegment) {
       const mediaDuration = 0;
-      const timescale = this.sps?.time_scale ?? 1000;
+      // const timescale = this.sps?.time_scale ?? 1000;
+      const timescale = 1000;
+      const track = this.getTrack();
 
-      this.initSegment = MP4.initSegment([this.getTrack()], mediaDuration, timescale);
+      this.initSegment = MP4.initSegment([track], mediaDuration, timescale);
+
       if (this.sourceBuffer && !this.initSegmentSent) {
         this.initSegmentSent = true;
         // this.sourceBuffer.appendBuffer(this.initSegment);
@@ -114,7 +117,8 @@ export class Remuxer {
         fps: this.sps.framesPerSecond ?? 60,
         width: this.sps.picWidth,
         height: this.sps.picHeight,
-        timescale: this.sps.time_scale ?? 1000,
+        // timescale: this.sps.time_scale ?? 1000,
+        timescale: 1000,
         duration: 0,
         samples: [],
       };
