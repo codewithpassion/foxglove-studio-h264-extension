@@ -1,9 +1,12 @@
 import { Box } from "@mui/material";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Remuxer } from "./lib/remuxer";
 
-export type H264VideoProps = { frameData: Uint8Array | undefined };
+export type H264VideoProps = {
+  frameData: Uint8Array | undefined;
+  renderDone: (() => void) | undefined;
+};
 
 async function getSourceBuffer(mediaSource: MediaSource, codec: string): Promise<SourceBuffer> {
   /**
@@ -16,12 +19,7 @@ async function getSourceBuffer(mediaSource: MediaSource, codec: string): Promise
     const initSourceBuffer = () => {
       try {
         const sourceBuffer = mediaSource.addSourceBuffer(`video/mp4; codecs="${codec}"`);
-
-        ["abort", "error", "update", "updateend", "updatestart"].forEach((ev) => {
-          sourceBuffer.addEventListener(ev, () => {
-            console.log(`XX: SourceBuffer ${ev}`);
-          });
-        });
+        sourceBuffer.mode = "segments";
 
         sourceBuffer.addEventListener("error", (ev) => {
           console.error(`XX: SourceBuffer error: `, ev);
@@ -40,9 +38,8 @@ async function getSourceBuffer(mediaSource: MediaSource, codec: string): Promise
   });
 }
 
-const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
+const H264Video: React.FC<H264VideoProps> = ({ frameData, renderDone }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  //   const { mediaSource, sourceBuffer } = useMemo(async () => {
   const mediaSource = useMemo(() => new MediaSource(), []);
   const [sourceBuffer, setSourceBuffer] = useState<SourceBuffer | undefined>(undefined);
   const [codec, setCodec] = useState<string | undefined>(undefined);
@@ -51,6 +48,28 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
     const newRemuxer = new Remuxer();
     newRemuxer.onReady = (_codec) => setCodec(_codec);
     return newRemuxer;
+  }, []);
+
+  const onRenderDoneRef = useRef(
+    useCallback(() => {
+      renderDone?.();
+    }, [renderDone]),
+  );
+
+  useEffect(() => {
+    console.log("XX: Setting up videoFrameCallback");
+
+    const callback: (now: number, meta: VideoFrameMetadata) => void = (
+      now: number,
+      meta: VideoFrameMetadata,
+    ) => {
+      console.log(`videoFrameCallback: now: ${now} - `, meta);
+      onRenderDoneRef.current?.();
+      // set the callback again as this only is called once otherwise.
+      videoRef.current?.requestVideoFrameCallback(callback);
+    };
+
+    videoRef.current?.requestVideoFrameCallback(callback);
   }, []);
 
   useEffect(() => {
@@ -78,19 +97,13 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
     }
   }, [codec, mediaSource]);
 
-  // log
-  // useEffect(() => {
-  //   ["onsourceclose", "onsourceended", "onsourceopen"].forEach((ev) =>
-  //     mediaSource.addEventListener(ev, () => console.log(`XX: MediaSource event: ${ev}`)),
-  //   );
-  // }, [mediaSource]);
-
   return (
     <Box
       sx={{
         width: "100%",
         height: "100%",
         display: "flex",
+        flexDirection: "column",
       }}
     >
       <video
@@ -101,6 +114,7 @@ const H264Video: React.FC<H264VideoProps> = ({ frameData }) => {
         muted
         preload="metadata"
       ></video>
+      <div>AAA - {videoRef.current?.currentTime}</div>
     </Box>
   );
 };

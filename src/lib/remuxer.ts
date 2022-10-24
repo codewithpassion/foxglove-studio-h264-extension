@@ -55,6 +55,12 @@ export class Remuxer {
       if (!this.isReady && !this.sps && nalu.type === NaluTypes.SPS) {
         this.sps = new SPS(nalu.nalu.nalu);
         units.push(nalu.nalu.nalu);
+
+        console.log(
+          `fps: ${this.sps.framesPerSecond ?? "?"} - time_scale ${this.sps.time_scale ?? "?"} ` +
+            `- fixed_frame_rate_flag: ${this.sps.fixed_frame_rate_flag ?? "?"} ` +
+            `- num_units_in_tick: ${this.sps.num_units_in_tick ?? "?"}`,
+        );
       }
 
       if (!this.isReady && this.sps && this.pps) {
@@ -98,9 +104,10 @@ export class Remuxer {
     }
 
     const track = this.getTrack()!;
+    const duration = 1000 / (this.sps?.framesPerSecond ?? 60);
     const mp4Sample = {
       size: sampleLength,
-      duration: 33,
+      duration,
       cts: 0,
       flags: {
         isLeading: 0,
@@ -113,8 +120,9 @@ export class Remuxer {
     };
     track.samples.push(mp4Sample);
     track.len = sampleLength;
-    const moof = MP4.moof(this.seq++, this.dts++, track);
+    const moof = MP4.moof(this.seq++, this.dts, track);
     const mdat = MP4.mdat(payload);
+    this.dts += duration;
     const combined = this.appendByteArray(moof, mdat);
     if (this.sourceBuffer == undefined || this.sourceBuffer.updating) {
       this.pending = this.appendByteArray(this.pending, combined);
@@ -154,7 +162,7 @@ export class Remuxer {
 
   reset(): void {
     this.isReady = false;
-    this.dts = 0;
+    // this.dts = 0;
     this.pps = undefined;
     this.sps = undefined;
     this.initSegment = undefined;
