@@ -4,8 +4,8 @@ export type Track = {
   type: "video";
   len: number;
   fragmented: boolean;
-  sps: Uint8Array;
-  pps: Uint8Array;
+  sps: Uint8Array[];
+  pps: Uint8Array[];
   fps: number;
   width: number;
   height: number;

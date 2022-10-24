@@ -59,7 +59,9 @@ export class Remuxer {
         hasInitSegment = true;
         this.onReady(this.sps.MIME);
       } else {
-        units.push(nalu.nalu.nalu);
+        if (nalu.type === NaluTypes.IDR || nalu.type === NaluTypes.NDR) {
+          units.push(nalu.nalu.nalu);
+        }
       }
     }
     if (hasInitSegment) {
@@ -97,6 +99,7 @@ export class Remuxer {
     } else {
       try {
         this.sourceBuffer.appendBuffer(this.appendByteArray(this.pending, combined));
+        console.log(`XX: AppendBuffer seq: ${this.seq}`);
       } catch (e) {
         console.error(`AppendBuffer error`, e);
       }
@@ -113,8 +116,8 @@ export class Remuxer {
         type: "video",
         len: 0, // correct ??
         fragmented: true,
-        sps: this.sps.bitstream.stream,
-        pps: this.pps,
+        sps: [this.sps.bitstream.stream],
+        pps: [this.pps],
         fps: this.sps.framesPerSecond ?? 60,
         width: this.sps.picWidth,
         height: this.sps.picHeight,
