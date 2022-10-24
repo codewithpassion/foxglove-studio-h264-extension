@@ -167,7 +167,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       mode: "video",
       node: videoRef.current!,
       debug,
-      flushingTime: 1,
+      flushingTime: 0,
       fps: readFpsFromTrack ? undefined : state.data.fps ?? 60,
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
