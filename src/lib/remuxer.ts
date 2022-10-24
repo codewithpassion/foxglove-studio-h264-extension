@@ -120,7 +120,7 @@ export class Remuxer {
         height: this.sps.picHeight,
         // timescale: this.sps.time_scale ?? 1000,
         timescale: 1000,
-        duration: 0,
+        duration: 1000,
         samples: [],
       };
       return track;
