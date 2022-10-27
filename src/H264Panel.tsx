@@ -1,19 +1,15 @@
 import { CompressedImage } from "@foxglove/schemas/schemas/typescript";
 import { PanelExtensionContext, RenderState, MessageEvent } from "@foxglove/studio";
-import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react";
+import { useLayoutEffect, useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 
 import H264WebCodecVideo from "./H264WebCodecVideo";
 import { useH264State } from "./Settings";
-import { NALUStream } from "./lib/h264-utils";
-import { identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
 
 type ImageMessage = MessageEvent<CompressedImage>;
 
 function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Element {
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
-
-  const naluStreamInfoRef = useRef<NaluStreamInfo | undefined>(undefined);
 
   const { state, updatePanelSettingsEditor, imageTopics, setTopics } = useH264State(context);
 
@@ -31,32 +27,6 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     updatePanelSettingsEditor(imageTopics);
   }, [context, state, imageTopics, updatePanelSettingsEditor]);
 
-  const getNaluStreamInfo = useCallback((imgData: Uint8Array) => {
-    if (naluStreamInfoRef.current == undefined) {
-      const streamInfo = identifyNaluStreamInfo(imgData);
-      if (streamInfo.type !== "unknown") {
-        naluStreamInfoRef.current = streamInfo;
-        console.info(
-          `Stream identified as ${streamInfo.type} with box size: ${streamInfo.boxSize}`,
-        );
-      }
-    }
-    return naluStreamInfoRef.current;
-  }, []);
-
-  const getVideoData = useCallback(
-    (imgData: Uint8Array) => {
-      const streamInfo = getNaluStreamInfo(imgData);
-      return streamInfo?.type === "packet"
-        ? new NALUStream(imgData, {
-            type: "packet",
-            boxSize: streamInfo.boxSize,
-          }).convertToAnnexB().buf
-        : imgData;
-    },
-    [getNaluStreamInfo],
-  );
-
   const onRender = useCallback(
     (renderState: RenderState, done: () => void) => {
       setRenderDone(done);
@@ -69,11 +39,11 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
       if (renderState.currentFrame && renderState.currentFrame.length > 0) {
         renderState.currentFrame.forEach((f) => {
           const imageMessage = f as ImageMessage;
-          setImageData(getVideoData(imageMessage.message.data));
+          setImageData(imageMessage.message.data);
         });
       }
     },
-    [getVideoData, setTopics],
+    [setTopics],
   );
 
   // Setup our onRender function and start watching topics and currentFrame for messages.

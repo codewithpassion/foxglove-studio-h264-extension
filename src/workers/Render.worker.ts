@@ -1,5 +1,5 @@
-import { SPS } from "../lib/h264-utils";
-import { getNalus, NaluTypes } from "../lib/utils";
+import { NALUStream, SPS } from "../lib/h264-utils";
+import { getNalus, identifyNaluStreamInfo, NaluStreamInfo, NaluTypes } from "../lib/utils";
 import {
   InitRenderEvent,
   RenderDomeEvent as RenderDoneEvent,
@@ -27,6 +27,7 @@ class RenderWorker {
   private timestamp = 0;
 
   private pendingStatus: StatusUpdate | null = null;
+  private naluStreamInfo: NaluStreamInfo | null = null;
 
   private setStatus(type: StatusType, message: string) {
     if (this.pendingStatus) {
@@ -47,7 +48,7 @@ class RenderWorker {
     this.host.postMessage(new RenderDoneEvent());
   }
 
-  onVideoDecoderOutput(frame: VideoFrame) {
+  private onVideoDecoderOutput(frame: VideoFrame) {
     // Update statistics.
     if (this.startTime == null) {
       this.startTime = performance.now();
@@ -80,9 +81,22 @@ class RenderWorker {
     }
   }
 
-  onVideoDecoderOutputError(err: Error) {
+  private onVideoDecoderOutputError(err: Error) {
     this.setStatus("decode", err.message);
     console.error(`H264 Render worker decoder error`, err);
+  }
+
+  private getNaluStreamInfo(imgData: Uint8Array) {
+    if (this.naluStreamInfo == undefined) {
+      const streamInfo = identifyNaluStreamInfo(imgData);
+      if (streamInfo.type !== "unknown") {
+        this.naluStreamInfo = streamInfo;
+        console.debug(
+          `Stream identified as ${streamInfo.type} with box size: ${streamInfo.boxSize}`,
+        );
+      }
+    }
+    return this.naluStreamInfo;
   }
 
   // Set up a VideoDecoer.
@@ -92,13 +106,25 @@ class RenderWorker {
     error: this.onVideoDecoderOutputError.bind(this),
   });
 
+  private getAnnexBFrame(frameData: Uint8Array) {
+    const streamInfo = this.getNaluStreamInfo(frameData);
+    if (streamInfo?.type === "packet") {
+      const res = new NALUStream(frameData, {
+        type: "packet",
+        boxSize: streamInfo.boxSize,
+      }).convertToAnnexB().buf;
+      return res;
+    }
+    return frameData;
+  }
+
   init(event: InitRenderEvent) {
     this.renderer = new WebGLRenderer("webgl", event.canvas);
   }
 
   onFrame(event: RenderEvent) {
-    const frame = new Uint8Array(event.frameData);
-
+    // the decoder, as it is configured, expects 'annexB' style h264 data.
+    const frame = this.getAnnexBFrame(new Uint8Array(event.frameData));
     if (this.decoder.state === "unconfigured") {
       const decoderConfig = this.getDecoderConfig(frame);
       if (decoderConfig) {
@@ -112,7 +138,7 @@ class RenderWorker {
         this.decoder.decode(
           new EncodedVideoChunk({
             type: keyframe,
-            data: event.frameData,
+            data: frame,
             timestamp: this.timestamp++,
           }),
         );

@@ -703,28 +703,20 @@ export class NALUStream {
       this.iterate((buff, first) => {
         let p = first - 4;
         if (p < 0) throw new Error("NALUStream error: Unexpected packet format");
-        // const len = last - first;
         buff[p++] = 0xff & 0;
         buff[p++] = 0xff & 0;
         buff[p++] = 0xff & 0;
         buff[p++] = 0xff & 1;
       });
+    } else if (this.type === "packet" && this.boxSize === 3) {
+      this.iterate((buff, first) => {
+        let p = first - 3;
+        if (p < 0) throw new Error("Unexpected packet format");
+        buff[p++] = 0xff & 0;
+        buff[p++] = 0xff & 0;
+        buff[p++] = 0xff & 1;
+      });
     }
-    // else if (this.type === "annexB" && this.boxSize === 3) {
-    //   /* change 00 00 01 delimiters to packet lengths */
-    //   this.iterate((buff, first, last) => {
-    //     let p = first - 3;
-    //     if (p < 0) throw new Error("Unexpected packet format");
-    //     const len = last - first;
-    //     if (this.strict && 0xff & (len >> 24 !== 0))
-    //       throw new Error(
-    //         "NALUStream error: Packet too long to store length when boxLenMinusOne is 2"
-    //       );
-    //     buff[p++] = 0xff & (len >> 16);
-    //     buff[p++] = 0xff & (len >> 8);
-    //     buff[p++] = 0xff & len;
-    //   });
-    // }
     this.type = "annexB";
     this.nextPacket = this.nextAnnexBPacket;
 

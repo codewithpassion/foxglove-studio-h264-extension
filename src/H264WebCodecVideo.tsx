@@ -9,6 +9,12 @@ export type H264WebCodecVideoProps = {
   renderDone: (() => void) | undefined;
 };
 
+function copyArray(src: ArrayBufferLike) {
+  const dst = new ArrayBuffer(src.byteLength);
+  new Uint8Array(dst).set(new Uint8Array(src));
+  return dst;
+}
+
 const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, renderDone }) => {
   const renderDoneRef = useRef(renderDone);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,7 +50,10 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, render
 
   useEffect(() => {
     if (worker && frameData) {
-      worker.postMessage(new RenderEvent(frameData.buffer), [frameData.buffer]);
+      // we need to copy the data buffer as it will be transfered to the background worker.
+      // Otherwise we risk exceptions in other parts of studio.
+      const buffer = copyArray(frameData.buffer);
+      worker.postMessage(new RenderEvent(buffer), [buffer]);
     }
   }, [frameData, worker]);
 
