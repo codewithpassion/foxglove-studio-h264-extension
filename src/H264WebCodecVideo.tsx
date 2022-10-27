@@ -9,16 +9,17 @@ export type H264WebCodecVideoProps = {
   renderDone: (() => void) | undefined;
 };
 
-const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({
-  frameData,
-  renderDone: _renderDone,
-}) => {
+const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, renderDone }) => {
+  const renderDoneRef = useRef(renderDone);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
 
-  const onWorkerMessage = useCallback((data: globalThis.MessageEvent<WorkerEvent>) => {
-    console.log(`Message from WebWorker: ${data.data.type}`);
-    // setResponse(data.data.message);
+  const onWorkerMessage = useCallback(({ data: event }: globalThis.MessageEvent<WorkerEvent>) => {
+    if (event.type === "renderDone") {
+      renderDoneRef.current?.();
+    } else if (event.type === "status") {
+      // We could display the fps?
+    }
   }, []);
 
   // Create webworker and subscribe to 'message' event.
@@ -54,10 +55,10 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({
         height: "100%",
         display: "flex",
         flexDirection: "column",
+        justifyContent: "center",
       }}
     >
       <canvas style={{ width: "100%", height: "auto" }} ref={canvasRef}></canvas>
-      aaa
     </Box>
   );
 };

@@ -48,7 +48,6 @@
     "@types/lodash": "^4.14.186",
     "@types/offscreencanvas": "^2019.7.0",
     "immer": "^9.0.15",
-    "jmuxer": "^2.0.5",
     "lodash": "^4.17.21",
     "worker-loader": "^3.0.8"
   }

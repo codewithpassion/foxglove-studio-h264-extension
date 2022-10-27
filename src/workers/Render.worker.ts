@@ -1,7 +1,12 @@
-import { EventRemuxer } from "../lib/EventRemuxer";
 import { SPS } from "../lib/h264-utils";
 import { getNalus, NaluTypes } from "../lib/utils";
-import { InitRenderEvent, RenderEvent, WorkerEvent } from "./RenderEvents";
+import {
+  InitRenderEvent,
+  RenderDomeEvent as RenderDoneEvent,
+  RenderEvent,
+  StatusEvent,
+  WorkerEvent,
+} from "./RenderEvents";
 import { WebGLRenderer } from "./WebGLRenderer";
 
 export type StatusType = "render" | "decode";
@@ -10,133 +15,141 @@ export type StatusUpdate = PartialRecord<StatusType, string>;
 
 const scope = self as unknown as Worker;
 
-let pendingStatus: StatusUpdate | null = null;
+type HostType = Window & typeof globalThis;
 
-function setStatus(type: StatusType, message: string) {
-  if (pendingStatus) {
-    pendingStatus[type] = message;
-  } else {
-    pendingStatus = { [type]: message };
+class RenderWorker {
+  constructor(private host: HostType) {}
 
-    self.requestAnimationFrame(statusAnimationFrame);
-  }
-}
+  private renderer: { draw(data: VideoFrame): void } | null = null;
+  private pendingFrame: VideoFrame | null = null;
+  private startTime: number | null = null;
+  private frameCount = 0;
+  private timestamp = 0;
 
-function statusAnimationFrame() {
-  self.postMessage(pendingStatus);
-  pendingStatus = null;
-}
+  private pendingStatus: StatusUpdate | null = null;
 
-// Rendering. Drawing is limited to once per animation frame.
-let renderer: { draw(data: VideoFrame): void } | null = null;
-let pendingFrame: VideoFrame | null = null;
-let startTime: number | null = null;
-let frameCount = 0;
-
-// Set up a VideoDecoer.
-const decoder = new VideoDecoder({
-  output(frame: VideoFrame) {
-    console.log(`XX got frame`, frame);
-    // Update statistics.
-    if (startTime == null) {
-      startTime = performance.now();
+  private setStatus(type: StatusType, message: string) {
+    if (this.pendingStatus) {
+      this.pendingStatus[type] = message;
     } else {
-      const elapsed = (performance.now() - startTime) / 1000;
-      const fps = ++frameCount / elapsed;
-      setStatus("render", `${fps.toFixed(0)} fps`);
+      this.pendingStatus = { [type]: message };
+
+      this.host.requestAnimationFrame(this.statusAnimationFrame.bind(this));
+    }
+  }
+
+  private statusAnimationFrame() {
+    if (this.pendingStatus) {
+      this.host.postMessage(new StatusEvent(this.pendingStatus));
+    }
+
+    this.pendingStatus = null;
+    this.host.postMessage(new RenderDoneEvent());
+  }
+
+  onVideoDecoderOutput(frame: VideoFrame) {
+    // Update statistics.
+    if (this.startTime == null) {
+      this.startTime = performance.now();
+    } else {
+      const elapsed = (performance.now() - this.startTime) / 1000;
+      const fps = ++this.frameCount / elapsed;
+      this.setStatus("render", `${fps.toFixed(0)}`);
     }
 
     // Schedule the frame to be rendered.
-    renderFrame(frame);
-  },
-  error(e) {
-    setStatus("decode", e.message);
-    console.error(`XX Decode error`, e);
-  },
-});
-const remuxer = new EventRemuxer();
-remuxer.onFrame = (data: { frame: Uint8Array; isKeyFrame: boolean }) => {
-  console.log(`XX Remuxer frame`);
-  decoder.decode(
-    new EncodedVideoChunk({
-      type: data.isKeyFrame ? "key" : "delta",
-      timestamp: dts++,
-      data: data.frame,
-    }),
-  );
-};
-
-function renderFrame(frame: VideoFrame) {
-  if (!pendingFrame) {
-    // Schedule rendering in the next animation frame.
-    requestAnimationFrame(renderAnimationFrame);
-  } else {
-    // Close the current pending frame before replacing it.
-    pendingFrame.close();
+    this.renderFrame(frame);
   }
-  // Set or replace the pending frame.
-  pendingFrame = frame;
-}
 
-function renderAnimationFrame() {
-  if (pendingFrame) {
-    renderer?.draw(pendingFrame);
-    pendingFrame = null;
-  }
-}
-
-function getDecoderConfig(frameData: Uint8Array): VideoDecoderConfig | null {
-  const nalus = getNalus(frameData);
-  const spsNalu = nalus.find((n) => n.type === NaluTypes.SPS);
-  if (spsNalu) {
-    const sps = new SPS(spsNalu.nalu.nalu);
-    const decoderConfig: VideoDecoderConfig = {
-      codec: sps.MIME,
-      codedHeight: sps.picHeight,
-      codedWidth: sps.picWidth,
-      // description:
-    };
-    return decoderConfig;
-  }
-  return null;
-}
-
-// function isKeyFrame(frameData: Uint8Array): boolean {
-//   const nalus = getNalus(frameData);
-//   return nalus.find((n) => n.type === NaluTypes.IDR) != undefined;
-// }
-
-let dts = 0;
-
-// Subscribe to the 'message' event
-scope.addEventListener("message", (event: MessageEvent<WorkerEvent>) => {
-  console.log(`XX Received message`, event);
-  if (event.data.type === "init") {
-    const eventData = event.data as InitRenderEvent;
-    renderer = new WebGLRenderer("webgl2", eventData.canvas);
-    // eventData.canvas;
-  } else if (event.data.type === "frame") {
-    const eventData = event.data as RenderEvent;
-    const frame = new Uint8Array(eventData.frameData);
-    if (decoder.state === "unconfigured") {
-      const decoderConfig = getDecoderConfig(frame);
-      if (decoderConfig) {
-        decoder.configure(decoderConfig);
-      }
-      console.log("XX Decoder config: ", decoderConfig);
-      console.log("XX Decoder status", decoder.state);
-    } else if (decoder.state === "configured") {
-      // const keyframe = isKeyFrame(new Uint8Array(eventData.frameData)) ? "key" : "delta";
-
-      remuxer.feed(frame);
-      // decoder.decode(
-      //   new EncodedAudioChunk({
-      //     type: keyframe,
-      //     data: eventData.frameData,
-      //     timestamp: dts++,
-      //   }),
-      // );
+  private renderFrame(frame: VideoFrame) {
+    if (!this.pendingFrame) {
+      // Schedule rendering in the next animation frame.
+      requestAnimationFrame(this.renderAnimationFrame.bind(this));
+    } else {
+      // Close the current pending frame before replacing it.
+      this.pendingFrame.close();
     }
+    // Set or replace the pending frame.
+    this.pendingFrame = frame;
+  }
+
+  private renderAnimationFrame() {
+    if (this.pendingFrame) {
+      this.renderer?.draw(this.pendingFrame);
+      this.pendingFrame = null;
+    }
+  }
+
+  onVideoDecoderOutputError(err: Error) {
+    this.setStatus("decode", err.message);
+    console.error(`H264 Render worker decoder error`, err);
+  }
+
+  // Set up a VideoDecoer.
+  private decoder = new VideoDecoder({
+    // We got a frame
+    output: this.onVideoDecoderOutput.bind(this),
+    error: this.onVideoDecoderOutputError.bind(this),
+  });
+
+  init(event: InitRenderEvent) {
+    this.renderer = new WebGLRenderer("webgl", event.canvas);
+  }
+
+  onFrame(event: RenderEvent) {
+    const frame = new Uint8Array(event.frameData);
+
+    if (this.decoder.state === "unconfigured") {
+      const decoderConfig = this.getDecoderConfig(frame);
+      if (decoderConfig) {
+        this.decoder.configure(decoderConfig);
+      }
+    }
+    if (this.decoder.state === "configured") {
+      const keyframe = this.isKeyFrame(new Uint8Array(event.frameData)) ? "key" : "delta";
+
+      try {
+        this.decoder.decode(
+          new EncodedVideoChunk({
+            type: keyframe,
+            data: event.frameData,
+            timestamp: this.timestamp++,
+          }),
+        );
+      } catch (e) {
+        console.error(`H264 Render Workerd ecode error`, e);
+      }
+    }
+  }
+
+  private getDecoderConfig(frameData: Uint8Array): VideoDecoderConfig | null {
+    const nalus = getNalus(frameData);
+    const spsNalu = nalus.find((n) => n.type === NaluTypes.SPS);
+    if (spsNalu) {
+      const sps = new SPS(spsNalu.nalu.nalu);
+      const decoderConfig: VideoDecoderConfig = {
+        codec: sps.MIME,
+        codedHeight: sps.picHeight,
+        codedWidth: sps.picWidth,
+      };
+      return decoderConfig;
+    }
+    return null;
+  }
+
+  private isKeyFrame(frameData: Uint8Array): boolean {
+    const nalus = getNalus(frameData);
+    return nalus.find((n) => n.type === NaluTypes.IDR) != undefined;
+  }
+}
+
+// Create a worker instance and subscribe to message event from the host.
+const worker = new RenderWorker(self);
+scope.addEventListener("message", (event: MessageEvent<WorkerEvent>) => {
+  if (event.data.type === "init") {
+    worker.init(event.data as InitRenderEvent);
+  } else if (event.data.type === "frame") {
+    worker.onFrame(event.data as RenderEvent);
   }
 });
 

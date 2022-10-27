@@ -6,12 +6,9 @@ import { useCallback, useMemo, useState } from "react";
 export type H264State = {
   data: {
     topic?: string;
-    fps?: number;
-    readFpsFromSource?: boolean;
   };
   debug?: {
     debug?: boolean;
-    addDuration?: boolean;
   };
 };
 
@@ -39,12 +36,9 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
 
     return {
       data: {
-        topic: partialState?.data?.topic ?? "",
-        fps: partialState?.data?.fps ?? 60,
-        readFpsFromSource: partialState?.data?.readFpsFromSource ?? false,
+        topic: partialState?.data?.topic ?? (imageTopics.length > 0 ? imageTopics[0]?.name : ""),
       },
       debug: {
-        addDuration: partialState?.debug?.addDuration ?? true,
         debug: partialState?.debug?.debug ?? false,
       },
     };
@@ -90,35 +84,14 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
                 options: topicOptions,
                 value: state.data.topic,
               },
-              readFpsFromSource: {
-                label: "Read FPS from video",
-                input: "boolean",
-                value: state.data?.readFpsFromSource ?? false,
-              },
-              fps: {
-                label: "FPS",
-                input: "select",
-                options: [
-                  { value: 24, label: "24fps" },
-                  { value: 30, label: "30fps" },
-                  { value: 60, label: "60fps" },
-                ],
-                value: state.data.fps,
-                disabled: state.data?.readFpsFromSource ?? false,
-              },
             },
           },
           debug: {
             label: "Debug",
             icon: "Cube",
             fields: {
-              addDuration: {
-                label: "Duration on jMux.feed?",
-                input: "boolean",
-                value: state.debug?.addDuration ?? false,
-              },
               debug: {
-                label: "JMuxer debug flag",
+                label: "Log debug info",
                 input: "boolean",
                 value: state.debug?.debug ?? false,
               },

@@ -1,6 +1,9 @@
+// Based on https://github.com/w3c/webcodecs/blob/main/samples/video-decode-display/renderer_webgl.js
+// License: https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document
+
 export class WebGLRenderer {
   #canvas: OffscreenCanvas | null = null;
-  #ctx: WebGL2RenderingContext | null = null;
+  #ctx: WebGLRenderingContext | null = null;
 
   static vertexShaderSource = `
       attribute vec2 xy;
@@ -25,17 +28,17 @@ export class WebGLRenderer {
       }
     `;
 
-  constructor(type: "webgl2", canvas: OffscreenCanvas) {
+  constructor(type: "webgl", canvas: OffscreenCanvas) {
     this.#canvas = canvas;
     const gl = (this.#ctx = canvas.getContext(type));
     if (!gl) {
-      throw "WebGL context is null";
+      throw Error("WebGL context is null");
     }
 
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
     if (!vertexShader) {
-      throw "VertexShader is null";
+      throw Error("VertexShader is null");
     }
 
     gl.shaderSource(vertexShader, WebGLRenderer.vertexShaderSource);
@@ -47,7 +50,7 @@ export class WebGLRenderer {
 
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     if (!fragmentShader) {
-      throw "FragmentShader is null";
+      throw Error("FragmentShader is null");
     }
     gl.shaderSource(fragmentShader, WebGLRenderer.fragmentShaderSource);
     gl.compileShader(fragmentShader);
@@ -57,7 +60,7 @@ export class WebGLRenderer {
 
     const shaderProgram = gl.createProgram();
     if (!shaderProgram) {
-      throw "ShaderProgram is null";
+      throw Error("ShaderProgram is null");
     }
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
