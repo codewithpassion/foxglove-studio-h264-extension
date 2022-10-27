@@ -1,31 +1,29 @@
 // Based on https://github.com/OllieJones/h264-interp-utils
 // No License given.
 
-
 /* eslint-disable */
 
-function byte2hex (val : number) {
-  return ('00' + val.toString(16)).slice(-2)
+function byte2hex(val: number) {
+  return ("00" + val.toString(16)).slice(-2);
 }
 
-
-export const profileNames : Map<number, string> = new Map([
-  [66, 'BASELINE'],
-  [77, 'MAIN'],
-  [88, 'EXTENDED'],
-  [100, 'FREXT_HP'],
-  [110, 'FREXT_Hi10P'],
-  [122, 'FREXT_Hi422'],
-  [244, 'FREXT_Hi444'],
-  [44, 'FREXT_CAVLC444']
-])
+export const profileNames: Map<number, string> = new Map([
+  [66, "BASELINE"],
+  [77, "MAIN"],
+  [88, "EXTENDED"],
+  [100, "FREXT_HP"],
+  [110, "FREXT_Hi10P"],
+  [122, "FREXT_Hi422"],
+  [244, "FREXT_Hi444"],
+  [44, "FREXT_CAVLC444"],
+]);
 
 export const chromaFormatValues = {
-  0: 'YUV400',
-  1: 'YUV420',
-  2: 'YUV422',
-  3: 'YUV444'
-}
+  0: "YUV400",
+  1: "YUV420",
+  2: "YUV422",
+  3: "YUV444",
+};
 
 // noinspection DuplicatedCode
 /**
@@ -848,12 +846,12 @@ export class NALUStream {
 }
 
 export class SPS {
-  private bitstream: Bitstream;
+  bitstream: Bitstream;
   // private buffer: Uint8Array;
   nal_ref_id: number;
   nal_unit_type: number | undefined;
   profile_idc: number;
-  profileName: string
+  profileName: string;
   constraint_set0_flag: number;
   constraint_set1_flag: number;
   constraint_set2_flag: number;
@@ -899,14 +897,14 @@ export class SPS {
   frame_cropping_rect_right_offset: number | undefined;
   frame_cropping_rect_top_offset: number | undefined;
   frame_cropping_rect_bottom_offset: number | undefined;
-  cropRect: { x: number, y: number, width: number, height: number};
+  cropRect: { x: number; y: number; width: number; height: number };
   vui_parameters_present_flag: number;
   aspect_ratio_info_present_flag: number | undefined;
   aspect_ratio_idc: number | undefined;
   sar_width: number | undefined;
   sar_height: number | undefined;
-  overscan_info_present_flag: number |undefined;
-  overscan_appropriate_flag: number| undefined;
+  overscan_info_present_flag: number | undefined;
+  overscan_appropriate_flag: number | undefined;
   video_signal_type_present_flag: number | undefined;
   video_format: number | undefined;
   video_full_range_flag: number | undefined;
@@ -918,7 +916,7 @@ export class SPS {
   chroma_sample_loc_type_top_field: number | undefined;
   chroma_sample_loc_type_bottom_field: number | undefined;
   timing_info_present_flag: number | undefined;
-  num_units_in_tick:  number | undefined;
+  num_units_in_tick: number | undefined;
   time_scale: number | undefined;
   fixed_frame_rate_flag: number | undefined;
   framesPerSecond: number | undefined;
@@ -926,224 +924,228 @@ export class SPS {
 
   success: boolean;
 
-
-  constructor (SPS: Uint8Array) {
-    const bitstream = new Bitstream(SPS)
-    this.bitstream = bitstream
+  constructor(SPS: Uint8Array) {
+    const bitstream = new Bitstream(SPS);
+    this.bitstream = bitstream;
     // this.buffer = bitstream.buffer
 
-    const forbidden_zero_bit = bitstream.u_1()
-    if (forbidden_zero_bit) throw new Error('NALU error: invalid NALU header')
-    this.nal_ref_id = bitstream.u_2()
-    this.nal_unit_type = bitstream.u(5)
-    if (this.nal_unit_type !== 7) throw new Error('SPS error: not SPS')
+    const forbidden_zero_bit = bitstream.u_1();
+    if (forbidden_zero_bit) throw new Error("NALU error: invalid NALU header");
+    this.nal_ref_id = bitstream.u_2();
+    this.nal_unit_type = bitstream.u(5);
+    if (this.nal_unit_type !== 7) throw new Error("SPS error: not SPS");
 
     this.profile_idc = bitstream.u_8()!;
-    if ( profileNames.has(this.profile_idc)) {
+    if (profileNames.has(this.profile_idc)) {
       this.profileName = profileNames.get(this.profile_idc)!;
     } else {
-      throw new Error('SPS error: invalid profile_idc')
+      throw new Error("SPS error: invalid profile_idc");
     }
 
-    this.constraint_set0_flag = bitstream.u_1()
-    this.constraint_set1_flag = bitstream.u_1()
-    this.constraint_set2_flag = bitstream.u_1()
-    this.constraint_set3_flag = bitstream.u_1()
-    this.constraint_set4_flag = bitstream.u_1()
-    this.constraint_set5_flag = bitstream.u_1()
-    const reserved_zero_2bits = bitstream.u_2()
-    if (reserved_zero_2bits !== 0)
-      throw new Error('SPS error: reserved_zero_2bits must be zero')
+    this.constraint_set0_flag = bitstream.u_1();
+    this.constraint_set1_flag = bitstream.u_1();
+    this.constraint_set2_flag = bitstream.u_1();
+    this.constraint_set3_flag = bitstream.u_1();
+    this.constraint_set4_flag = bitstream.u_1();
+    this.constraint_set5_flag = bitstream.u_1();
+    const reserved_zero_2bits = bitstream.u_2();
+    if (reserved_zero_2bits !== 0) throw new Error("SPS error: reserved_zero_2bits must be zero");
 
-    this.level_idc = bitstream.u_8()!
+    this.level_idc = bitstream.u_8()!;
 
-    this.seq_parameter_set_id = bitstream.ue_v()
+    this.seq_parameter_set_id = bitstream.ue_v();
     if (this.seq_parameter_set_id > 31)
-      throw new Error('SPS error: seq_parameter_set_id must be 31 or less')
+      throw new Error("SPS error: seq_parameter_set_id must be 31 or less");
 
     this.has_no_chroma_format_idc =
-      (this.profile_idc === 66 || this.profile_idc === 77 || this.profile_idc === 88)
+      this.profile_idc === 66 || this.profile_idc === 77 || this.profile_idc === 88;
 
     if (!this.has_no_chroma_format_idc) {
-      this.chroma_format_idc = bitstream.ue_v()
+      this.chroma_format_idc = bitstream.ue_v();
       if (this.bit_depth_luma_minus8 && this.bit_depth_luma_minus8 > 3)
-        throw new Error('SPS error: chroma_format_idc must be 3 or less')
-      if (this.chroma_format_idc === 3) { /* 3 = YUV444 */
-        this.separate_colour_plane_flag = bitstream.u_1()
-        this.chromaArrayType = this.separate_colour_plane_flag ? 0 : this.chroma_format_idc
+        throw new Error("SPS error: chroma_format_idc must be 3 or less");
+      if (this.chroma_format_idc === 3) {
+        /* 3 = YUV444 */
+        this.separate_colour_plane_flag = bitstream.u_1();
+        this.chromaArrayType = this.separate_colour_plane_flag ? 0 : this.chroma_format_idc;
       }
-      this.bit_depth_luma_minus8 = bitstream.ue_v()
+      this.bit_depth_luma_minus8 = bitstream.ue_v();
       if (this.bit_depth_luma_minus8 > 6)
-        throw new Error('SPS error: bit_depth_luma_minus8 must be 6 or less')
-      this.bitDepthLuma = this.bit_depth_luma_minus8 + 8
-      this.bit_depth_chroma_minus8 = bitstream.ue_v()
+        throw new Error("SPS error: bit_depth_luma_minus8 must be 6 or less");
+      this.bitDepthLuma = this.bit_depth_luma_minus8 + 8;
+      this.bit_depth_chroma_minus8 = bitstream.ue_v();
       if (this.bit_depth_chroma_minus8 > 6)
-        throw new Error('SPS error: bit_depth_chroma_minus8 must be 6 or less')
-      this.lossless_qpprime_flag = bitstream.u_1()
-      this.bitDepthChroma = this.bit_depth_chroma_minus8 + 8
-      this.seq_scaling_matrix_present_flag = bitstream.u_1()
+        throw new Error("SPS error: bit_depth_chroma_minus8 must be 6 or less");
+      this.lossless_qpprime_flag = bitstream.u_1();
+      this.bitDepthChroma = this.bit_depth_chroma_minus8 + 8;
+      this.seq_scaling_matrix_present_flag = bitstream.u_1();
       if (this.seq_scaling_matrix_present_flag) {
-        const n_ScalingList = (this.chroma_format_idc !== 3) ? 8 : 12
-        this.seq_scaling_list_present_flag = []
-        this.seq_scaling_list = []
+        const n_ScalingList = this.chroma_format_idc !== 3 ? 8 : 12;
+        this.seq_scaling_list_present_flag = [];
+        this.seq_scaling_list = [];
         for (let i = 0; i < n_ScalingList; i++) {
-          const seqScalingListPresentFlag = bitstream.u_1()
-          this.seq_scaling_list_present_flag.push(seqScalingListPresentFlag)
+          const seqScalingListPresentFlag = bitstream.u_1();
+          this.seq_scaling_list_present_flag.push(seqScalingListPresentFlag);
           if (seqScalingListPresentFlag) {
-            const sizeOfScalingList = i < 6 ? 16 : 64
-            let nextScale = 8
-            let lastScale = 8
-            const delta_scale = []
+            const sizeOfScalingList = i < 6 ? 16 : 64;
+            let nextScale = 8;
+            let lastScale = 8;
+            const delta_scale = [];
             for (let j = 0; j < sizeOfScalingList; j++) {
               if (nextScale !== 0) {
-                const deltaScale = bitstream.se_v()
-                delta_scale.push(deltaScale)
-                nextScale = (lastScale + deltaScale + 256) % 256
+                const deltaScale = bitstream.se_v();
+                delta_scale.push(deltaScale);
+                nextScale = (lastScale + deltaScale + 256) % 256;
               }
-              lastScale = (nextScale === 0) ? lastScale : nextScale
-              this.seq_scaling_list.push(delta_scale)
+              lastScale = nextScale === 0 ? lastScale : nextScale;
+              this.seq_scaling_list.push(delta_scale);
             }
           }
         }
       }
     }
 
-    this.log2_max_frame_num_minus4 = bitstream.ue_v()
+    this.log2_max_frame_num_minus4 = bitstream.ue_v();
     if (this.log2_max_frame_num_minus4 > 12)
-      throw new Error('SPS error: log2_max_frame_num_minus4 must be 12 or less')
-    this.maxFrameNum = 1 << (this.log2_max_frame_num_minus4 + 4)
+      throw new Error("SPS error: log2_max_frame_num_minus4 must be 12 or less");
+    this.maxFrameNum = 1 << (this.log2_max_frame_num_minus4 + 4);
 
-    this.pic_order_cnt_type = bitstream.ue_v()
+    this.pic_order_cnt_type = bitstream.ue_v();
     if (this.pic_order_cnt_type > 2)
-      throw new Error('SPS error: pic_order_cnt_type must be 2 or less')
+      throw new Error("SPS error: pic_order_cnt_type must be 2 or less");
 
     // let expectedDeltaPerPicOrderCntCycle = 0
     switch (this.pic_order_cnt_type) {
       case 0:
-        this.log2_max_pic_order_cnt_lsb_minus4 = bitstream.ue_v()
+        this.log2_max_pic_order_cnt_lsb_minus4 = bitstream.ue_v();
         if (this.log2_max_pic_order_cnt_lsb_minus4 > 12)
-          throw new Error('SPS error: log2_max_pic_order_cnt_lsb_minus4 must be 12 or less')
-        this.maxPicOrderCntLsb = 1 << (this.log2_max_pic_order_cnt_lsb_minus4 + 4)
-        break
+          throw new Error("SPS error: log2_max_pic_order_cnt_lsb_minus4 must be 12 or less");
+        this.maxPicOrderCntLsb = 1 << (this.log2_max_pic_order_cnt_lsb_minus4 + 4);
+        break;
       case 1:
-        this.delta_pic_order_always_zero_flag = bitstream.u_1()
-        this.offset_for_non_ref_pic = bitstream.se_v()
-        this.offset_for_top_to_bottom_field = bitstream.se_v()
-        this.num_ref_frames_in_pic_order_cnt_cycle = bitstream.ue_v()
-        this.offset_for_ref_frame = []
+        this.delta_pic_order_always_zero_flag = bitstream.u_1();
+        this.offset_for_non_ref_pic = bitstream.se_v();
+        this.offset_for_top_to_bottom_field = bitstream.se_v();
+        this.num_ref_frames_in_pic_order_cnt_cycle = bitstream.ue_v();
+        this.offset_for_ref_frame = [];
         for (let i = 0; i < this.num_ref_frames_in_pic_order_cnt_cycle; i++) {
-          const offsetForRefFrame = bitstream.se_v()
-          this.offset_for_ref_frame.push(offsetForRefFrame)
+          const offsetForRefFrame = bitstream.se_v();
+          this.offset_for_ref_frame.push(offsetForRefFrame);
           // eslint-disable-next-line no-unused-vars
           // expectedDeltaPerPicOrderCntCycle += offsetForRefFrame
         }
-        break
+        break;
       case 2:
         /* there is nothing for case 2 */
-        break
+        break;
     }
 
-    this.max_num_ref_frames = bitstream.ue_v()
-    this.gaps_in_frame_num_value_allowed_flag = bitstream.u_1()
-    this.pic_width_in_mbs_minus_1 = bitstream.ue_v()
-    this.picWidth = (this.pic_width_in_mbs_minus_1 + 1) << 4
-    this.pic_height_in_map_units_minus_1 = bitstream.ue_v()
-    this.frame_mbs_only_flag = bitstream.u_1()
-    this.interlaced = !this.frame_mbs_only_flag
-    if (this.frame_mbs_only_flag === 0) { /* 1 if frames rather than fields (no interlacing) */
-      this.mb_adaptive_frame_field_flag = bitstream.u_1()
+    this.max_num_ref_frames = bitstream.ue_v();
+    this.gaps_in_frame_num_value_allowed_flag = bitstream.u_1();
+    this.pic_width_in_mbs_minus_1 = bitstream.ue_v();
+    this.picWidth = (this.pic_width_in_mbs_minus_1 + 1) << 4;
+    this.pic_height_in_map_units_minus_1 = bitstream.ue_v();
+    this.frame_mbs_only_flag = bitstream.u_1();
+    this.interlaced = !this.frame_mbs_only_flag;
+    if (this.frame_mbs_only_flag === 0) {
+      /* 1 if frames rather than fields (no interlacing) */
+      this.mb_adaptive_frame_field_flag = bitstream.u_1();
     }
-    this.picHeight = ((2 - this.frame_mbs_only_flag) * (this.pic_height_in_map_units_minus_1 + 1)) << 4
+    this.picHeight =
+      ((2 - this.frame_mbs_only_flag) * (this.pic_height_in_map_units_minus_1 + 1)) << 4;
 
-    this.direct_8x8_inference_flag = bitstream.u_1()
-    this.frame_cropping_flag = bitstream.u_1()
+    this.direct_8x8_inference_flag = bitstream.u_1();
+    this.frame_cropping_flag = bitstream.u_1();
     if (this.frame_cropping_flag) {
-      this.frame_cropping_rect_left_offset = bitstream.ue_v()
-      this.frame_cropping_rect_right_offset = bitstream.ue_v()
-      this.frame_cropping_rect_top_offset = bitstream.ue_v()
-      this.frame_cropping_rect_bottom_offset = bitstream.ue_v()
+      this.frame_cropping_rect_left_offset = bitstream.ue_v();
+      this.frame_cropping_rect_right_offset = bitstream.ue_v();
+      this.frame_cropping_rect_top_offset = bitstream.ue_v();
+      this.frame_cropping_rect_bottom_offset = bitstream.ue_v();
       this.cropRect = {
         x: this.frame_cropping_rect_left_offset,
         y: this.frame_cropping_rect_top_offset,
-        width: this.picWidth - (this.frame_cropping_rect_left_offset + this.frame_cropping_rect_right_offset),
-        height: this.picHeight - (this.frame_cropping_rect_top_offset + this.frame_cropping_rect_bottom_offset)
-      }
+        width:
+          this.picWidth -
+          (this.frame_cropping_rect_left_offset + this.frame_cropping_rect_right_offset),
+        height:
+          this.picHeight -
+          (this.frame_cropping_rect_top_offset + this.frame_cropping_rect_bottom_offset),
+      };
     } else {
       this.cropRect = {
         x: 0,
         y: 0,
         width: this.picWidth,
-        height: this.picHeight
-      }
+        height: this.picHeight,
+      };
     }
-    this.vui_parameters_present_flag = bitstream.u_1()
+    this.vui_parameters_present_flag = bitstream.u_1();
     if (this.vui_parameters_present_flag) {
-      this.aspect_ratio_info_present_flag = bitstream.u_1()
+      this.aspect_ratio_info_present_flag = bitstream.u_1();
       if (this.aspect_ratio_info_present_flag) {
-        this.aspect_ratio_idc = bitstream.u_8()
+        this.aspect_ratio_idc = bitstream.u_8();
         if (this.aspect_ratio_idc) {
-          this.sar_width = bitstream.u(16)
-          this.sar_height = bitstream.u(16)
+          this.sar_width = bitstream.u(16);
+          this.sar_height = bitstream.u(16);
         }
       }
 
-      this.overscan_info_present_flag = bitstream.u_1()
-      if (this.overscan_info_present_flag)
-        this.overscan_appropriate_flag = bitstream.u_1()
-      this.video_signal_type_present_flag = bitstream.u_1()
+      this.overscan_info_present_flag = bitstream.u_1();
+      if (this.overscan_info_present_flag) this.overscan_appropriate_flag = bitstream.u_1();
+      this.video_signal_type_present_flag = bitstream.u_1();
       if (this.video_signal_type_present_flag) {
-        this.video_format = bitstream.u(3)
-        this.video_full_range_flag = bitstream.u_1()
-        this.color_description_present_flag = bitstream.u_1()
+        this.video_format = bitstream.u(3);
+        this.video_full_range_flag = bitstream.u_1();
+        this.color_description_present_flag = bitstream.u_1();
         if (this.color_description_present_flag) {
-          this.color_primaries = bitstream.u_8()
-          this.transfer_characteristics = bitstream.u_8()
-          this.matrix_coefficients = bitstream.u_8()
+          this.color_primaries = bitstream.u_8();
+          this.transfer_characteristics = bitstream.u_8();
+          this.matrix_coefficients = bitstream.u_8();
         }
       }
-      this.chroma_loc_info_present_flag = bitstream.u_1()
+      this.chroma_loc_info_present_flag = bitstream.u_1();
       if (this.chroma_loc_info_present_flag) {
-        this.chroma_sample_loc_type_top_field = bitstream.ue_v()
-        this.chroma_sample_loc_type_bottom_field = bitstream.ue_v()
+        this.chroma_sample_loc_type_top_field = bitstream.ue_v();
+        this.chroma_sample_loc_type_bottom_field = bitstream.ue_v();
       }
-      this.timing_info_present_flag = bitstream.u_1()
+      this.timing_info_present_flag = bitstream.u_1();
       if (this.timing_info_present_flag) {
-        this.num_units_in_tick = bitstream.u(32)
-        this.time_scale = bitstream.u(32)
-        this.fixed_frame_rate_flag = bitstream.u_1()
+        this.num_units_in_tick = bitstream.u(32);
+        this.time_scale = bitstream.u(32);
+        this.fixed_frame_rate_flag = bitstream.u_1();
         if (this.num_units_in_tick && this.time_scale && this.num_units_in_tick > 0) {
-          this.framesPerSecond = this.time_scale / ( 2 * this.num_units_in_tick) 
+          this.framesPerSecond = this.time_scale / (2 * this.num_units_in_tick);
         }
       }
-      this.nal_hrd_parameters_present_flag = bitstream.u_1()
+      this.nal_hrd_parameters_present_flag = bitstream.u_1();
     }
-    this.success = true
+    this.success = true;
   }
 
-  get stream () {
-    return this.bitstream.stream
+  get stream() {
+    return this.bitstream.stream;
   }
 
-  get profile_compatibility () {
-    let v = this.constraint_set0_flag << 7
-    v |= this.constraint_set1_flag << 6
-    v |= this.constraint_set2_flag << 5
-    v |= this.constraint_set3_flag << 4
-    v |= this.constraint_set4_flag << 3
-    v |= this.constraint_set5_flag << 1
-    return v
+  get profile_compatibility() {
+    let v = this.constraint_set0_flag << 7;
+    v |= this.constraint_set1_flag << 6;
+    v |= this.constraint_set2_flag << 5;
+    v |= this.constraint_set3_flag << 4;
+    v |= this.constraint_set4_flag << 3;
+    v |= this.constraint_set5_flag << 1;
+    return v;
   }
 
   /**
    * getter for the MIME type encoded in this avcC
    * @returns {string}
    */
-  get MIME () {
-    const f = []
-    f.push('avc1.')
-    f.push(byte2hex(this.profile_idc).toUpperCase())
-    f.push(byte2hex(this.profile_compatibility).toUpperCase())
-    f.push(byte2hex(this.level_idc).toUpperCase())
-    return f.join('')
+  get MIME() {
+    const f = [];
+    f.push("avc1.");
+    f.push(byte2hex(this.profile_idc).toUpperCase());
+    f.push(byte2hex(this.profile_compatibility).toUpperCase());
+    f.push(byte2hex(this.level_idc).toUpperCase());
+    return f.join("");
   }
 }

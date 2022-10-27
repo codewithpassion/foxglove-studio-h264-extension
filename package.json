@@ -1,5 +1,5 @@
 {
-  "name": "foxglove-example-custom-image-extension-panel",
+  "name": "h264-panel",
   "displayName": "Foxglove Example Custom Image Extension Panel",
   "description": "",
   "publisher": "Foxglove",
@@ -12,6 +12,7 @@
     "lint:ci": "eslint --report-unused-disable-directives .",
     "lint": "eslint --report-unused-disable-directives --fix .",
     "local-install": "foxglove-extension install",
+    "dev": "foxglove-extension install",
     "package": "foxglove-extension package",
     "pretest": "foxglove-extension pretest"
   },
@@ -39,10 +40,15 @@
     "typescript": "4.7.4"
   },
   "dependencies": {
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
+    "@mui/material": "^5.10.10",
+    "@types/dom-webcodecs": "^0.1.4",
     "@types/jmuxer": "^2.0.3",
     "@types/lodash": "^4.14.186",
+    "@types/offscreencanvas": "^2019.7.0",
     "immer": "^9.0.15",
-    "jmuxer": "^2.0.5",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "worker-loader": "^3.0.8"
   }
 }
