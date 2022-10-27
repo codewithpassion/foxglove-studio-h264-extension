@@ -3,7 +3,7 @@ import { SPS } from "./h264-utils";
 import { MP4 } from "./mp4-generator";
 import { getNalus, NaluTypes } from "./utils";
 
-export class Remuxer {
+export class EventRemuxer {
   private isReady = false;
   private dts = 0;
   private seq = 0;
@@ -11,33 +11,35 @@ export class Remuxer {
   private pps: Uint8Array | undefined = undefined;
   private initSegment: Uint8Array | undefined = undefined;
   private initSegmentSent = false;
-  private sourceBuffer: SourceBuffer | undefined = undefined;
   private pending: Uint8Array = new Uint8Array(0);
+  private canAppend = false;
 
-  onReady: (codec: string) => void = () => null;
-
-  public get codec(): string | undefined {
-    if (this.sps) {
-      return this.sps.MIME;
-    } else {
-      return undefined;
-    }
-  }
-
-  setSourceBuffer(buffer: SourceBuffer): void {
-    this.sourceBuffer = buffer;
-
-    if (this.initSegment) {
+  setCanAppend = ({ canAppend }: { canAppend: boolean }): void => {
+    this.canAppend = canAppend;
+    if (this.canAppend && this.initSegment && !this.initSegmentSent) {
       this.initSegmentSent = true;
       try {
-        this.sourceBuffer?.appendBuffer(this.initSegment);
-        // this.sourceBuffer?.appendBuffer(this.appendByteArray(this.initSegment, this.pending));
+        // this.onFrame(this.initSegment);
+        this.onFrame({
+          frame: this.appendByteArray(this.initSegment, this.pending),
+          isKeyFrame: true,
+        });
         if (this.pending.length > 0) {
           this.pending = new Uint8Array();
         }
       } catch (e) {
         console.error(`XX: Error `, e);
       }
+    }
+  };
+  onReady: (codec: string) => void = () => null;
+  onFrame: (data: { frame: Uint8Array; isKeyFrame: boolean }) => void = () => null;
+
+  public get codec(): string | undefined {
+    if (this.sps) {
+      return this.sps.MIME;
+    } else {
+      return undefined;
     }
   }
 
@@ -84,9 +86,8 @@ export class Remuxer {
 
       this.initSegment = MP4.initSegment([track], mediaDuration, timescale);
 
-      if (this.sourceBuffer && !this.initSegmentSent) {
+      if (!this.initSegmentSent) {
         this.initSegmentSent = true;
-        // this.sourceBuffer.appendBuffer(this.initSegment);
         this.pending = this.initSegment;
       }
     }
@@ -104,6 +105,9 @@ export class Remuxer {
     }
 
     const track = this.getTrack()!;
+    if (track == undefined) {
+      return;
+    }
     const duration = 1000 / (this.sps?.framesPerSecond ?? 60);
     const mp4Sample = {
       size: sampleLength,
@@ -127,11 +131,14 @@ export class Remuxer {
     const mdat = MP4.mdat(payload);
     this.dts += duration;
     const combined = this.appendByteArray(moof, mdat);
-    if (this.sourceBuffer == undefined || this.sourceBuffer.updating) {
+    if (!this.canAppend) {
       this.pending = this.appendByteArray(this.pending, combined);
     } else {
       try {
-        this.sourceBuffer.appendBuffer(this.appendByteArray(this.pending, combined));
+        this.onFrame({
+          frame: this.appendByteArray(this.pending, combined),
+          isKeyFrame: hasKeyframe,
+        });
       } catch (e) {
         console.error(`AppendBuffer error`, e);
       }

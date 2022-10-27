@@ -4,7 +4,8 @@ import { PanelExtensionContext, RenderState, MessageEvent } from "@foxglove/stud
 import { useLayoutEffect, useEffect, useState, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 
-import H264Video from "./H264Video";
+// import H264Video from "./H264Video";
+import H264WebCodecVideo from "./H264WebCodecVideo";
 import { useH264State } from "./Settings";
 import { NALUStream } from "./lib/h264-utils";
 import { identifyNaluStreamInfo, NaluStreamInfo } from "./lib/utils";
@@ -96,7 +97,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     context.watch("currentTime");
     context.watch("didSeek");
     context.watch("topics");
-
+    context.watch("allFrames");
     context.watch("currentFrame");
   }, [context, onRender]);
 
@@ -123,7 +124,8 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
           ))}
         </select>
       </div>
-      <H264Video frameData={imageData} renderDone={renderDoneRef.current} />
+      {/* <H264Video frameData={imageData} renderDone={renderDoneRef.current} /> */}
+      <H264WebCodecVideo frameData={imageData} renderDone={renderDoneRef.current} />
     </div>
   );
 }
