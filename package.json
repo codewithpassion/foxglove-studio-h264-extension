@@ -1,9 +1,13 @@
 {
   "name": "h264-panel",
-  "displayName": "Foxglove Example Custom Image Extension Panel",
+  "displayName": "Foxglove Studio h264 video render",
   "description": "",
-  "publisher": "Foxglove",
-  "version": "1.1.0",
+  "publisher": "Dominik Fretz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/foxglove/studio.git"
+  },
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/extension.js",
   "scripts": {
