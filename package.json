@@ -5,7 +5,7 @@
   "publisher": "Dominik Fretz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/foxglove/studio.git"
+    "url": "https://github.com/codewithpassion/foxglove-studio-h264-extension"
   },
   "version": "1.0.0",
   "license": "MIT",
