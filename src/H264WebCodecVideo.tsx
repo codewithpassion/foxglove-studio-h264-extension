@@ -1,12 +1,14 @@
 import { Box } from "@mui/material";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 
-import Worker from "./workers/Render.worker.ts";
+import useCanvasSize, { Size } from "./hooks/useCanvasSize";
+import Worker from "./workers/Render.worker?raw";
 import { InitRenderEvent, RenderEvent, WorkerEvent } from "./workers/RenderEvents";
 
 export type H264WebCodecVideoProps = {
   frameData: Uint8Array | undefined;
   renderDone: (() => void) | undefined;
+  canvasUpdated?: (size: Size) => void;
 };
 
 function copyArray(src: ArrayBufferLike) {
@@ -15,18 +17,43 @@ function copyArray(src: ArrayBufferLike) {
   return dst;
 }
 
-const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, renderDone }) => {
-  const renderDoneRef = useRef(renderDone);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
+const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({
+  frameData,
+  renderDone,
+  canvasUpdated,
+}) => {
+  const initialRenderDone = useRef(false);
+  const renderDoneRef = useRef<() => void>();
+  // const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvasRefSetter, canvasPosition, canvasElement] = useCanvasSize<HTMLCanvasElement>();
 
-  const onWorkerMessage = useCallback(({ data: event }: globalThis.MessageEvent<WorkerEvent>) => {
-    if (event.type === "renderDone") {
-      renderDoneRef.current?.();
-    } else if (event.type === "status") {
-      // We could display the fps?
+  useEffect(() => {
+    renderDoneRef.current = renderDone;
+  }, [renderDone]);
+
+  useEffect(() => {
+    if (canvasPosition) {
+      canvasUpdated?.(canvasPosition);
     }
-  }, []);
+  }, [canvasPosition, canvasUpdated]);
+
+  const onWorkerMessage = useCallback(
+    ({ data: event }: globalThis.MessageEvent<WorkerEvent>) => {
+      if (event.type === "renderDone") {
+        renderDoneRef.current?.();
+
+        if (!initialRenderDone.current) {
+          const rec = canvasElement?.getBoundingClientRect();
+          if (rec) {
+            canvasUpdated?.(rec);
+          }
+        }
+      } else if (event.type === "status") {
+        // We could display the fps?
+      }
+    },
+    [canvasElement, canvasUpdated],
+  );
 
   // Create webworker and subscribe to 'message' event.
   const worker = useMemo(() => {
@@ -42,11 +69,11 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, render
     return undefined;
   }, [onWorkerMessage, canvasElement]);
 
-  useLayoutEffect(() => {
-    if (canvasRef.current) {
-      setCanvasElement(canvasRef.current);
-    }
-  }, []);
+  // useLayoutEffect(() => {
+  //   if (canvasElement) {
+  //     canvasUpdated?.(getOffset(canvasElement));
+  //   }
+  // }, [canvasElement, canvasUpdated]);
 
   useEffect(() => {
     if (worker && frameData) {
@@ -67,7 +94,7 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, render
         justifyContent: "center",
       }}
     >
-      <canvas style={{ width: "100%", height: "auto" }} ref={canvasRef}></canvas>
+      <canvas style={{ width: "100%", height: "auto" }} ref={canvasRefSetter}></canvas>
     </Box>
   );
 };

@@ -1,7 +1,7 @@
 import { PanelExtensionContext, SettingsTreeAction, Topic } from "@foxglove/studio";
 import produce from "immer";
 import { set } from "lodash";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type H264State = {
   data: {
@@ -43,6 +43,11 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
       },
     };
   });
+
+  useEffect(() => {
+    context.saveState(state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   const actionHandler = useCallback(
     (action: SettingsTreeAction) => {

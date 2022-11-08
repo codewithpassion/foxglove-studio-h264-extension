@@ -1,6 +1,6 @@
 // From https://github.com/webpack-contrib/worker-loader#loading-without-worker-loader
 
-declare module "*.worker.ts" {
+declare module "*.worker?raw" {
   // You need to change `Worker`, if you specified a different value for the `workerType` option
   class WebpackWorker extends Worker {
     constructor();

@@ -1,23 +1,36 @@
 import { CompressedImage } from "@foxglove/schemas/schemas/typescript";
 import { PanelExtensionContext, RenderState, MessageEvent } from "@foxglove/studio";
-import { useLayoutEffect, useEffect, useState, useCallback } from "react";
+// import { isEqual } from "lodash";
+import React, { useLayoutEffect, useEffect, useState, useCallback, useRef } from "react";
 import ReactDOM from "react-dom";
 
 import H264WebCodecVideo from "./H264WebCodecVideo";
 import { useH264State } from "./Settings";
+import { Size } from "./hooks/useCanvasSize";
 
 type ImageMessage = MessageEvent<CompressedImage>;
 
-function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Element {
+export type H264PanelProps = {
+  context: PanelExtensionContext;
+  onOverlayReady?: (parent: HTMLDivElement) => void;
+};
+
+const H264Panel: React.FC<H264PanelProps> = ({ context, onOverlayReady }) => {
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
+  const doneRef = useRef<() => void>(() => {
+    return;
+  });
 
   const { state, updatePanelSettingsEditor, imageTopics, setTopics } = useH264State(context);
 
   const [imageData, setImageData] = useState<Uint8Array | undefined>();
+  const [canvasSize, setCanvasSize] = useState<Size | undefined>(undefined);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Save our state to the layout when the topic changes.
-    context.saveState(state);
+    // console.log("savestate", state.data.topic);
+    // context.saveState(state);
 
     if (state.data.topic) {
       // Subscribe to the new image topic when a new topic is chosen.
@@ -25,10 +38,11 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
     }
 
     updatePanelSettingsEditor(imageTopics);
-  }, [context, state, imageTopics, updatePanelSettingsEditor]);
+  }, [context, state.data.topic, imageTopics, updatePanelSettingsEditor]);
 
   const onRender = useCallback(
     (renderState: RenderState, done: () => void) => {
+      doneRef.current = done;
       setRenderDone(done);
 
       if (renderState.topics) {
@@ -57,17 +71,53 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
   }, [context, onRender]);
 
   // Call our done function at the end of each render.
+  // useEffect(() => {
+  //   renderDone?.();
+  // }, [renderDone]);
+
   useEffect(() => {
-    renderDone?.();
-  }, [renderDone]);
+    if (overlayRef.current && onOverlayReady) {
+      onOverlayReady(overlayRef.current);
+    }
+  }, [onOverlayReady]);
 
   return (
-    <div style={{ height: "100%", padding: "1rem" }}>
-      <H264WebCodecVideo frameData={imageData} renderDone={renderDone} />
+    <div style={{ height: "100%", flexGrow: 1, position: "relative" }}>
+      {/* {Overlay && <Overlay />} */}
+      <H264WebCodecVideo
+        frameData={imageData}
+        renderDone={renderDone}
+        canvasUpdated={setCanvasSize}
+      />
+      <div
+        ref={overlayRef}
+        style={{
+          display: "flex",
+          position: "absolute",
+          top: "50%",
+          transform: "translateY(-50%)",
+          left: 0,
+          width: canvasSize?.width ?? "100%",
+          height: canvasSize?.height ?? "100%",
+        }}
+      ></div>
     </div>
   );
-}
+};
 
 export function initExamplePanel(context: PanelExtensionContext): void {
-  ReactDOM.render(<ExamplePanel context={context} />, context.panelElement);
+  ReactDOM.render(<H264Panel context={context} />, context.panelElement);
 }
+
+export function initPanelWithOverlay(
+  context: PanelExtensionContext,
+  onOverlay: (parent: HTMLDivElement) => void,
+): void {
+  ReactDOM.render(
+    <H264Panel context={context} onOverlayReady={onOverlay}></H264Panel>,
+    context.panelElement,
+  );
+  // ReactDOM.render(<>{_Foo && <_Foo />}</>, context.panelElement);
+}
+
+export default H264Panel;

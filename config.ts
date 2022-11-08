@@ -9,11 +9,17 @@ module.exports = {
     // the standard one, otherwise the worker code doesn't get handled correctly.
     config.module.rules = [
       {
-        test: /\.worker\.ts$/,
+        test: /\.worker$/,
+        resourceQuery: /raw/,
         use: [
           {
             loader: "worker-loader",
-            options: { inline: "no-fallback" }, // Force to inline the worker as a blob.
+            options: {
+              inline: "no-fallback",
+              // filename: function (x) {
+              //   return "[name].[contenthash].worker.js";
+              // },
+            }, // Force to inline the worker as a blob.
           },
           {
             loader: "ts-loader", // use ts-loader to transpile ts > js
