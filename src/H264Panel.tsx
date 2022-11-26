@@ -34,7 +34,7 @@ const H264Panel: React.FC<H264PanelProps> = ({ context, onOverlayReady }) => {
 
     if (state.data.topic) {
       // Subscribe to the new image topic when a new topic is chosen.
-      context.subscribe([state.data.topic]);
+      context.subscribe([{ topic: state.data.topic }]);
     }
 
     updatePanelSettingsEditor(imageTopics);
@@ -64,6 +64,7 @@ const H264Panel: React.FC<H264PanelProps> = ({ context, onOverlayReady }) => {
   useLayoutEffect(() => {
     context.onRender = onRender;
 
+    context.watch("allFrames");
     context.watch("currentTime");
     context.watch("didSeek");
     context.watch("topics");

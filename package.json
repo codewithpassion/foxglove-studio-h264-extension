@@ -52,7 +52,8 @@
     "immer": "^9.0.15",
     "lodash": "^4.17.21",
     "usehooks-ts": "^2.9.1",
-    "worker-loader": "^3.0.8"
+    "worker-loader": "^3.0.8",
+    "node-video-lib-async": "file:///home/roboto/devel/mission-robotics/cloud/node-video-lib/node-video-lib-async-v2.2.1-5.tgz"
   },
   "resolutions": {
     "react": "17.0.2",
