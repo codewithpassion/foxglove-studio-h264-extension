@@ -11,6 +11,7 @@ _**NOTE: WebCodecs are currently in development and not all browsers support the
 ## Expected data
 
 Currently, the extension expects the image data to be in a message of type _sensor_msgs/CompressedImage_.
+A message can contain one or multiple frames. See below for more info on frame types.
 
 ### IDR/Keyframes (and SPS, PPS)
 

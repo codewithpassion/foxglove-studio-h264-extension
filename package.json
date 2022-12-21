@@ -1,13 +1,13 @@
 {
   "name": "h264-panel",
-  "displayName": "Foxglove Studio h264 video render",
-  "description": "",
+  "displayName": "Foxglove Studio h264 video render (experimental)",
+  "description": "An experimental h264 video renderer.",
   "publisher": "codewithpassion",
   "repository": {
     "type": "git",
     "url": "https://github.com/codewithpassion/foxglove-studio-h264-extension"
   },
-  "version": "1.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "main": "./dist/extension.js",
   "scripts": {
