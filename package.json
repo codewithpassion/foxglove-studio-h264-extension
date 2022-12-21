@@ -1,7 +1,7 @@
 {
   "name": "h264-panel",
   "displayName": "Foxglove Studio h264 video render (experimental)",
-  "description": "An experimental h264 video renderer.",
+  "description": "An experimental h264 video renderer. Provided by MissionRobotics (http://missionrobotics.us)",
   "publisher": "codewithpassion",
   "repository": {
     "type": "git",

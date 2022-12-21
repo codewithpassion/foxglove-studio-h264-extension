@@ -39,3 +39,7 @@ This should be solvable by subscribing to `allFrames` and going back in time fro
 ### Error handling
 
 Errors arrent currently handled nicely. If there was a decoder error, it is printed out on the developer console as an error but not yet brought to the UI.
+
+# Thanks
+
+This extension was supported by MissionRobotics (http://missionrobotics.us)
