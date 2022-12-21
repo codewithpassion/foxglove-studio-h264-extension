@@ -2,12 +2,12 @@
   "name": "h264-panel",
   "displayName": "H264 video render (experimental)",
   "description": "An experimental h264 video renderer. Provided by MissionRobotics (http://missionrobotics.us)",
-  "publisher": "Dominik Fretz @ http://missionrobotics.us",
+  "publisher": "missionrobotics",
   "repository": {
     "type": "git",
     "url": "https://github.com/codewithpassion/foxglove-studio-h264-extension"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "main": "./dist/extension.js",
   "scripts": {
