@@ -7,9 +7,6 @@ export type H264State = {
   data: {
     topic?: string;
   };
-  debug?: {
-    debug?: boolean;
-  };
 };
 
 type UseH264StateType = {
@@ -37,9 +34,6 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
     return {
       data: {
         topic: partialState?.data?.topic ?? (imageTopics.length > 0 ? imageTopics[0]?.name : ""),
-      },
-      debug: {
-        debug: partialState?.debug?.debug ?? false,
       },
     };
   });
@@ -86,21 +80,10 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
               },
             },
           },
-          debug: {
-            label: "Debug",
-            icon: "Cube",
-            fields: {
-              debug: {
-                label: "Log debug info",
-                input: "boolean",
-                value: state.debug?.debug ?? false,
-              },
-            },
-          },
         },
       });
     },
-    [actionHandler, context, state.data, state.debug],
+    [actionHandler, context, state.data],
   );
 
   return useMemo(
