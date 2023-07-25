@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 
 import Worker from "./workers/Render.worker.ts";
 import { InitRenderEvent, RenderEvent, WorkerEvent } from "./workers/RenderEvents";
+import { Buffer } from "buffer";
 
 export type H264WebCodecVideoProps = {
   frameData: Uint8Array | undefined;
@@ -52,7 +53,7 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, render
     if (worker && frameData) {
       // we need to copy the data buffer as it will be transfered to the background worker.
       // Otherwise we risk exceptions in other parts of studio.
-      const buffer = copyArray(frameData.buffer);
+      const buffer = copyArray(Buffer.from(frameData));
       worker.postMessage(new RenderEvent(buffer), [buffer]);
     }
   }, [frameData, worker]);
