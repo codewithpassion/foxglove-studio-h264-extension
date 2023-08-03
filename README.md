@@ -1,6 +1,6 @@
 # H264 render extension - based on custom-image-extension
 
-This extension is based on [WebCodecs](https://w3c.github.io/webcodecs/) and a WebGL renderer.
+This extension is just protobuf added verions from https://github.com/codewithpassion/foxglove-studio-h264-extension.
 It accepts H264 NALUs - noteably IDR frames, SPS, PPS, and NDR frames - and pushes them through WebCodecs to get images.
 The images are then rendered on a canvas as fast as they are produced from the _WebCodec_.
 
