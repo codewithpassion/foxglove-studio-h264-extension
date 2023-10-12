@@ -23,7 +23,7 @@ const useH264State = (context: PanelExtensionContext): UseH264StateType => {
 
   // Filter all of our topics to find the ones with a CompresssedImage message.
   const imageTopics = useMemo(
-    () => (topics ?? []).filter((topic) => topic.datatype === "sensor_msgs/CompressedImage"),
+    () => (topics ?? []).filter((topic) => topic.datatype === "sensor_msgs/CompressedImage" || topic.datatype === "sensor_msgs/msg/CompressedImage"),
     [topics],
   );
 

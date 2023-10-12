@@ -15,6 +15,10 @@ export type StatusUpdate = PartialRecord<StatusType, string>;
 
 const scope = self as unknown as Worker;
 
+type WorkerInterface = Worker & {
+  new (): Worker;
+};
+
 type HostType = Window & typeof globalThis;
 
 class RenderWorker {
@@ -179,4 +183,4 @@ scope.addEventListener("message", (event: MessageEvent<WorkerEvent>) => {
   }
 });
 
-export {};
+export default {} as WorkerInterface;

@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import Worker from "./workers/Render.worker.ts";
+import Worker from "./workers/Render.worker";
 import { InitRenderEvent, RenderEvent, WorkerEvent } from "./workers/RenderEvents";
 
 export type H264WebCodecVideoProps = {
@@ -52,7 +52,9 @@ const H264WebCodecVideo: React.FC<H264WebCodecVideoProps> = ({ frameData, render
     if (worker && frameData) {
       // we need to copy the data buffer as it will be transfered to the background worker.
       // Otherwise we risk exceptions in other parts of studio.
-      const buffer = copyArray(frameData.buffer);
+      const buffer = copyArray(
+        frameData.buffer.slice(frameData.byteOffset, frameData.byteLength + frameData.byteOffset),
+      );
       worker.postMessage(new RenderEvent(buffer), [buffer]);
     }
   }, [frameData, worker]);
