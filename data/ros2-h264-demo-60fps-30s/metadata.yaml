@@ -1,0 +1,26 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: mcap
+  duration:
+    nanoseconds: 29999869792
+  starting_time:
+    nanoseconds_since_epoch: 1660063738206000090
+  message_count: 1801
+  topics_with_message_count:
+    - topic_metadata:
+        name: /test/compressed
+        type: sensor_msgs/msg/CompressedImage
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 1801
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - ros2-h264-demo-60fps-30s.mcap
+  files:
+    - path: ros2-h264-demo-60fps-30s.mcap
+      starting_time:
+        nanoseconds_since_epoch: 1660063738206000090
+      duration:
+        nanoseconds: 29999869792
+      message_count: 1801
