@@ -2264,7 +2264,7 @@ node-releases@^2.0.13:
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.13.tgz#d5ed1627c23e3461e819b02e57b75e4899b1c81d"
   integrity sha512-uYr7J37ae/ORWdZeQ1xxMJe3NtdmqMC/JZK+geofDrkLUApKRHPd18/TxtBOJ4A0/+uUIliorNrfYV6s1b02eQ==
 
-node-video-lib@2.2.1:
+"node-video-lib@patch:node-video-lib@npm:2.2.1#./patches/node-video-lib-async.patch":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/node-video-lib/-/node-video-lib-2.2.1.tgz#5e927aa9140a7d17e3f7ee7e6613ed2b9552dd50"
   integrity sha512-JLwt++txb0XMXYgZUWET6DI3Xky04pcS0R4Jb2KZ1lOy51o6zjhffWJpGo4JFZgiHK5pwXqBkokpGkbMvoMIOA==
