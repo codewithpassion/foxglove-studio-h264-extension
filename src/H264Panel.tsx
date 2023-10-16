@@ -21,7 +21,7 @@ function ExamplePanel({ context }: { context: PanelExtensionContext }): JSX.Elem
 
     if (state.data.topic) {
       // Subscribe to the new image topic when a new topic is chosen.
-      context.subscribe([state.data.topic]);
+      context.subscribe([{ topic: state.data.topic, preload: false }]);
     }
 
     updatePanelSettingsEditor(imageTopics);
